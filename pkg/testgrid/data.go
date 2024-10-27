@@ -1,5 +1,10 @@
 package testgrid
 
+import (
+	"fmt"
+	"time"
+)
+
 type Summary struct {
 	URL        string
 	Dashboards *DashboardMap
@@ -135,4 +140,15 @@ type Test struct {
 	} `json:"statuses"`
 	Target       string      `json:"target"`
 	UserProperty interface{} `json:"user_property"`
+}
+
+func (te *Test) RenderStatuses(timestamps []int64) (text string, failures int) {
+	for i, s := range te.ShortTexts {
+		if s != "" {
+			tm := time.Unix(timestamps[i]/1000, 0)
+			text += fmt.Sprintf("\t%s %s %s\n", s, tm, te.Messages[i])
+			failures += 1
+		}
+	}
+	return
 }

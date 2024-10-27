@@ -24,12 +24,3 @@ func Execute() {
 		os.Exit(1)
 	}
 }
-
-func hasStatus(boardStatus string, statuses []string) bool {
-	for _, status := range statuses {
-		if boardStatus == status {
-			return true
-		}
-	}
-	return false
-}

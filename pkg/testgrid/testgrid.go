@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var TestGridURL = "https://testgrid.k8s.io"
+var URL = "https://testgrid.k8s.io"
 
 type TestGrid struct {
 	TestGridURL string
@@ -20,7 +20,7 @@ type TestGridInterface interface {
 }
 
 func NewTestGrid() TestGridInterface {
-	return &TestGrid{TestGridURL: TestGridURL}
+	return &TestGrid{TestGridURL: URL}
 }
 
 func (t TestGrid) FetchSummary(dashboard string) (*Summary, error) {
@@ -28,7 +28,7 @@ func (t TestGrid) FetchSummary(dashboard string) (*Summary, error) {
 		dashboardList = &DashboardMap{}
 		data          []byte
 	)
-	url := fmt.Sprintf("%s/%s/summary", t.TestGridURL, strings.ReplaceAll(dashboard, " ", "%20"))
+	url := fmt.Sprintf("%s/%s/summary", t.TestGridURL, CleanSpaces(dashboard))
 	response, err := http.Get(url)
 	if err != nil {
 		return nil, err

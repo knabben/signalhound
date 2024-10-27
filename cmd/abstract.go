@@ -4,8 +4,6 @@ package cmd
 import (
 	"fmt"
 	"github.com/knabben/stalker/pkg/tui"
-	"log"
-
 	"github.com/spf13/cobra"
 )
 
@@ -21,26 +19,16 @@ func init() {
 }
 
 func RunAbstract(cmd *cobra.Command, args []string) error {
+	fmt.Println("Scrapping the testgrid dashboard...")
+	var allTabs []*tui.DashboardTab
 	for _, dashboard := range testBoards {
+		// render each board summary
 		summary, err := tg.FetchSummary(dashboard)
 		if err != nil {
-			log.Fatal("error fetching the summary", err)
+			return err
 		}
-
-		var counter = 0
-		for tab, dashboard := range *summary.Dashboards {
-			if hasStatus(dashboard.OverallStatus, brokenStatus) {
-				table, err := tg.FetchTable(dashboard.DashboardName, tab)
-				if err != nil {
-					_ = fmt.Errorf("error fetching table : %s", err)
-					continue
-				}
-				issue := tui.NewDashboardIssue(summary.URL, tab, dashboard, table)
-				if err = issue.RenderVisual(counter); err != nil {
-					return err
-				}
-			}
-		}
+		// renders the final board summary with tests
+		allTabs = append(allTabs, tui.RenderFromSummary(summary, brokenStatus)...)
 	}
-	return nil
+	return tui.RenderVisual(allTabs)
 }
