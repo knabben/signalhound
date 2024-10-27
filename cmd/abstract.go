@@ -4,7 +4,6 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
 	"github.com/knabben/stalker/pkg/testgrid"
 	"github.com/knabben/stalker/pkg/tui"
 	"log"
@@ -24,7 +23,6 @@ var abstractCmd = &cobra.Command{
 				log.Fatal("ERROR ", err)
 			}
 
-			fmt.Println(summary, len(*summary.Dashboards))
 			for tab, dashboard := range *summary.Dashboards {
 				if hasStatus(dashboard.OverallStatus, []string{testgrid.FAILING_STATUS, testgrid.FLAKY_STATUS}) {
 					if err := tui.Render(tab, dashboard, summary.URL); err != nil {
@@ -32,16 +30,8 @@ var abstractCmd = &cobra.Command{
 					}
 				}
 			}
-
-			/*
-				for key, value := range *tg.FilterByStatus(statuses, summary) {
-					dashboards.Add(fmt.Sprintf("%s", key), value)
-				}
-
-			*/
 		}
 
-		// render the final summary map
 		return nil
 	},
 }
