@@ -67,7 +67,7 @@ func NewDashboardTab(URL string, tab string, dashboard *testgrid.Dashboard, tabl
 	aggregation := fmt.Sprintf("%s#%s", dashboard.DashboardName, tab)
 	dash.BoardURL = testgrid.CleanSpaces(fmt.Sprintf("https://testgrid.k8s.io/%s&exclude-non-failed-tests=", aggregation))
 	dash.BoardHash = aggregation
-	dash.State = dashboard.OverallStatus
+	dash.State = strings.ToTitle(dashboard.OverallStatus)
 	dash.Icon = ":large_purple_square:"
 	if dashboard.OverallStatus == testgrid.FAILING_STATUS {
 		dash.Icon = ":large_red_square:"
