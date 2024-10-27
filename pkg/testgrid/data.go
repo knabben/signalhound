@@ -142,13 +142,17 @@ type Test struct {
 	UserProperty interface{} `json:"user_property"`
 }
 
-func (te *Test) RenderStatuses(timestamps []int64) (text string, failures int) {
+func (te *Test) RenderStatuses(timestamps []int64) (string, int, int) {
+	var firstFailure, text, failures = -1, "", 0
 	for i, s := range te.ShortTexts {
 		if s != "" {
+			if firstFailure < 0 {
+				firstFailure = i
+			}
 			tm := time.Unix(timestamps[i]/1000, 0)
 			text += fmt.Sprintf("\t%s %s %s\n", s, tm, te.Messages[i])
 			failures += 1
 		}
 	}
-	return
+	return text, failures, firstFailure
 }

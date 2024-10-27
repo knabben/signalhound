@@ -19,15 +19,16 @@ func init() {
 }
 
 func RunAbstract(cmd *cobra.Command, args []string) error {
-	fmt.Println("Scrapping the testgrid dashboard...")
 	var allTabs []*tui.DashboardTab
+
+	fmt.Println("Scrapping the testgrid dashboard...")
 	for _, dashboard := range testBoards {
-		// render each board summary
+		//render each board summary
 		summary, err := tg.FetchSummary(dashboard)
 		if err != nil {
 			return err
 		}
-		// renders the final board summary with tests
+		//renders the final board summary with tests
 		allTabs = append(allTabs, tui.RenderFromSummary(summary, brokenStatus)...)
 	}
 	return tui.RenderVisual(allTabs)

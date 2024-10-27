@@ -42,7 +42,7 @@ type RepositoryInterface interface {
 	GetWorkflowLogs(runID string) string
 }
 
-// NewGithub returns a new Github object with metadata set
+// NewGithub returns a new GitHub object with metadata set
 func NewGithub(ctx context.Context, client *gh.Client, workflowFile, owner, branch string) GitHubInterface {
 	return &Github{ctx: ctx, client: client, workflowFile: workflowFile, owner: owner, branch: branch}
 }

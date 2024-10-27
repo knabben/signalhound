@@ -2,23 +2,14 @@ package tui
 
 import (
 	"fmt"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/knabben/stalker/pkg/testgrid"
 	"regexp"
 	"strings"
 )
 
 var (
-	summaryRegex   = `(?<TABS>\d+ of \d+) (?<PERCENT>\(\d+\.\d+%\)) \w.* \((\d+ of \d+) or (\w.*) cells\)`
 	e2eSuitePrefix = `Kubernetes e2e suite.`
 	testRegex      = e2eSuitePrefix + `\[It\] \[(\w.*)\] (?<TEST>\w.*)`
-
-	keyStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF0000"))
-	bold     = lipgloss.NewStyle().Bold(true).
-		Foreground(lipgloss.Color("#ff8787")).TabWidth(4)
-	style = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#300a57")).
-		Background(lipgloss.Color("#fbf7ff")).TabWidth(2).Padding(2)
 )
 
 type DashboardTab struct {
@@ -29,12 +20,14 @@ type DashboardTab struct {
 	BoardHash string
 	Icon      string
 	State     string
+	Status    string
 
 	Tests []*TabTest
 }
 
 type TabTest struct {
 	Name            string
+	FirstTimestamp  int64
 	LatestTimestamp int64
 	TriageURL       string
 	ProwURL         string
@@ -67,7 +60,7 @@ func NewDashboardTab(URL string, tab string, dashboard *testgrid.Dashboard, tabl
 	aggregation := fmt.Sprintf("%s#%s", dashboard.DashboardName, tab)
 	dash.BoardURL = testgrid.CleanSpaces(fmt.Sprintf("https://testgrid.k8s.io/%s&exclude-non-failed-tests=", aggregation))
 	dash.BoardHash = aggregation
-	dash.State = strings.ToTitle(dashboard.OverallStatus)
+	dash.State = dashboard.OverallStatus
 	dash.Icon = ":large_purple_square:"
 	if dashboard.OverallStatus == testgrid.FAILING_STATUS {
 		dash.Icon = ":large_red_square:"
@@ -82,12 +75,13 @@ func renderTable(table *testgrid.TestGroup, state string) (tests []*TabTest) {
 		if strings.Contains(test.Name, e2eSuitePrefix) {
 			testName = getParameter(testRegex, testName)["TEST"]
 		}
-		errMessage, failures := test.RenderStatuses(table.Timestamps)
+		errMessage, failures, firstFailure := test.RenderStatuses(table.Timestamps)
 		if (failures >= minFailure && state == testgrid.FAILING_STATUS) || (failures >= minFlake && state == testgrid.FLAKY_STATUS) {
 			tabTest := TabTest{
 				Name:            testName,
-				LatestTimestamp: table.Timestamps[len(table.Timestamps)-1],
-				ProwURL:         testgrid.CleanSpaces(fmt.Sprintf("https://prow.k8s.io/view/gs/%s/%s", table.Query, table.Changelists[0])),
+				LatestTimestamp: table.Timestamps[0],
+				FirstTimestamp:  table.Timestamps[len(table.Timestamps)-1],
+				ProwURL:         testgrid.CleanSpaces(fmt.Sprintf("https://prow.k8s.io/view/gs/%s/%s", table.Query, table.Changelists[firstFailure])),
 				TriageURL:       testgrid.CleanSpaces(fmt.Sprintf("https://storage.googleapis.com/k8s-triage/index.html?test=%s", testgrid.CleanSpaces(testName))),
 				ErrMessage:      errMessage,
 			}
@@ -95,21 +89,6 @@ func renderTable(table *testgrid.TestGroup, state string) (tests []*TabTest) {
 		}
 	}
 	return
-}
-
-var baseTests = []string{"kubetest.Test", "kubetest.DumpClusterLogs", ".Overall", "kubetest.Node"}
-
-func isBaseTest(name string) bool {
-	for _, key := range baseTests {
-		if strings.Contains(name, key) {
-			return true
-		}
-	}
-	return false
-
-}
-func (d *DashboardTab) renderURL() string {
-	return strings.ReplaceAll(strings.ReplaceAll(d.URL, "/summary", "#"+d.Tab+"&exclude-non-failed-tests="), " ", "%20")
 }
 
 func hasStatus(boardStatus string, statuses []string) bool {

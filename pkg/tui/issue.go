@@ -1,40 +1,30 @@
 package tui
 
 import (
-	"fmt"
-	"os"
-	"strings"
+	"bytes"
 	"text/template"
 )
 
-var basicKeys = []string{"kubetest.Test", "kubetest.DumpClusterLogs", ".Overall"}
-
-func hasBasicTestKeys(name string) bool {
-	for _, key := range basicKeys {
-		if strings.Contains(name, key) {
-			return true
-		}
-	}
-	return false
+type IssueTemplate struct {
+	BoardName    string
+	TabName      string
+	TestName     string
+	FirstFailure string
+	LastFailure  string
+	TestGridURL  string
+	TriageURL    string
+	ProwURL      string
+	ErrMessage   string
+	Sig          string
 }
 
-func (d *DashboardTab) RenderTemplate() {
-	fmt.Println(d.renderURL())
-}
-
-type Output struct {
-	Bla string
-}
-
-func (d *DashboardTab) renderFile() {
-	x := Output{Bla: "ble"}
-	f, err := template.ParseFiles("pkg/tui/template/failure.tmpl")
-	if err != nil {
-		panic(err)
+func (d *DashboardTab) renderTemplate(issue *IssueTemplate, templateFile string) (output bytes.Buffer, err error) {
+	var file *template.Template
+	if file, err = template.ParseFiles(templateFile); err != nil {
+		return output, err
 	}
-
-	err = f.Execute(os.Stdout, x)
-	if err != nil {
-		panic(err)
+	if err = file.Execute(&output, issue); err != nil {
+		return output, err
 	}
+	return
 }

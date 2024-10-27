@@ -1,38 +1,35 @@
+# [Flaking Test] {{.TestName}}
+
 ### Which jobs are flaking?
 
-{{.Jobs}}
-
-> * ci-kubernetes-node-swap-fedora-serial
-> pull-kubernetes-e2e-gce
+* {{.BoardName}}
+* {{.TabName}}
 
 ### Which tests are flaking?
 
-{{.Test}}
-> * E2eNode Suite.[It] [sig-node] Device Plugin [NodeFeature:DevicePlugin] [Serial] DevicePlugin [Serial] [Disruptive] Keeps device plugin assignments after kubelet restart and device plugin restart (no pod restart)
+* [{{.TestName}}]({{.ProwURL}})
 
 ### Since when has it been flaking?
 
-{{.FirstFailure}}
-{{.LastFailure}}
+* First flaky: {{.FirstFailure}}
+* Latest flaky: {{.LastFailure}}
 
 ### Testgrid link
 
-{{.TestGrid}}
-
-> https://testgrid.k8s.io/sig-node-kubelet#kubelet-gce-e2e-swap-fedora-serial
+* [{{.TestGridURL}}]({{.TestGridURL}})
+* [{{.TriageURL}}]({{.TriageURL}})
 
 ### Reason for failure (if possible)
 
-{{.Reason}}
-> ```
-> { failed [FAILED] inconsistent device assignment after pod restart: no resources found for device-plugin-errors-3704/device-plugin-test-4a0b7496-f40b-43f8-a726-d2d3a6ab3bcb/device-plugin-test-4a0b7496-f40b-43f8-a726-d2d3a6ab3bcb
-> In [It] at: k8s.io/kubernetes/test/e2e_node/device_plugin_test.go:613 @ 10/15/24 15:50:21.431
-> }
-> ```
+```
+{{.ErrMessage}}
+```
 
 ### Anything else we need to know?
-> _No response_
+
+_No response_
 
 ### Relevant SIG(s)
 
-{{.SIG}}
+/sig {{.Sig}}
+cc @kubernetes/release-team-release-signal
