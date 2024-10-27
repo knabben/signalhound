@@ -102,7 +102,7 @@ func contentRender(tab *DashboardTab, i int) {
 			slackPanel.SetBorderColor(tcell.ColorBlue)
 			app.SetFocus(brokenPanel)
 		}
-		if event.Key() == tcell.KeyEscape || event.Key() == tcell.KeyUp || event.Key() == tcell.KeyDown {
+		if event.Key() == tcell.KeyEscape || event.Key() == tcell.KeyUp {
 			slackPanel.SetText("", false)
 			githubPanel.SetText("", false)
 			app.SetFocus(brokenPanel)
@@ -137,6 +137,11 @@ func contentRender(tab *DashboardTab, i int) {
 			position.SetText("[blue]COPIED [yellow]ISSUE [blue]TO THE CLIPBOARD!")
 			CopyToClipboard(githubPanel.GetText())
 			githubPanel.SetBorderColor(tcell.ColorBlue)
+			app.SetFocus(brokenPanel)
+		}
+		if event.Key() == tcell.KeyEscape || event.Key() == tcell.KeyUp {
+			slackPanel.SetText("", false)
+			githubPanel.SetText("", false)
 			app.SetFocus(brokenPanel)
 		}
 		if event.Key() == tcell.KeyLeft {
