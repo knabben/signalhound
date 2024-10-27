@@ -2,25 +2,10 @@ package tui
 
 import (
 	"fmt"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/knabben/stalker/pkg/testgrid"
 	"regexp"
 	"strings"
 	"time"
-)
-
-var (
-	summaryRegex = `(?<TABS>\d+ of \d+) (?<PERCENT>\(\d+\.\d+%\)) \w.* \((\d+ of \d+) or (\w.*) cells\)`
-	testRegex    = `Kubernetes e2e suite.\[It\] \[(\w.*)\] (?<TEST>\w.*)`
-
-	keyStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF0000"))
-	bold     = lipgloss.NewStyle().Bold(true).
-			Foreground(lipgloss.Color("#ff8787")).
-			Width(200).TabWidth(4)
-	style = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#300a57")).
-		Background(lipgloss.Color("#fbf7ff")).
-		Width(250).TabWidth(2).Padding(2)
 )
 
 func (d *DashboardIssue) RenderVisual(counter int) error {
@@ -30,13 +15,6 @@ func (d *DashboardIssue) RenderVisual(counter int) error {
 		isFlake                          bool
 	)
 
-	//url = testgrid.RenderURL(url, tab)
-	tg := testgrid.NewTestGrid()
-	result, err := tg.FetchTable(d.Dashboard.DashboardName, d.Tab)
-	if err != nil {
-		return err
-	}
-
 	icon, state := "🟪", "Flaking"
 	if d.Dashboard.OverallStatus == testgrid.FAILING_STATUS {
 		icon, state = "🟥", "Failing"
@@ -45,12 +23,12 @@ func (d *DashboardIssue) RenderVisual(counter int) error {
 	testAgg := fmt.Sprintf("%s#%s", d.Dashboard.DashboardName, d.Tab)
 	boardLink := fmt.Sprintf("https://testgrid.k8s.io/%s&exclude-non-failed-tests=", testAgg)
 
-	for _, test := range result.Tests {
-		lastTimestmap := result.Timestamps[0]
+	for _, test := range d.Table.Tests {
+		lastTimestmap := d.Table.Timestamps[0]
 
-		prowURL := fmt.Sprintf("https://prow.k8s.io/view/gs/%s/%s", result.Query, result.Changelists[0])
+		prowURL := fmt.Sprintf("https://prow.k8s.io/view/gs/%s/%s", d.Table.Query, d.Table.Changelists[0])
 
-		_, num := RenderStatuses(&test, result.Timestamps)
+		_, num := RenderStatuses(&test, d.Table.Timestamps)
 		if (num >= failingThreshold && d.Dashboard.OverallStatus == testgrid.FAILING_STATUS) || (num >= flakeThreshold && d.Dashboard.OverallStatus == testgrid.FLAKY_STATUS) {
 			testName := test.Name
 			if strings.Contains(test.Name, "Kubernetes e2e suite.[It]") {
@@ -60,7 +38,6 @@ func (d *DashboardIssue) RenderVisual(counter int) error {
 			triageLink := fmt.Sprintf("https://storage.googleapis.com/k8s-triage/index.html?test=%s", testName)
 			unixTimeUTC := time.Unix(lastTimestmap/1000, 0)
 			item := fmt.Sprintf("%s %s on [%s](%s): `%s` [Prow](%s), [Triage](%s), last failure on %s\n", icon, state, testAgg, boardLink, test.Name, prowURL, triageLink, unixTimeUTC.Format(time.RFC3339))
-
 			//https: //prow.k8s.io/view/gs/kubernetes-jenkins/logs/ci-kubernetes-e2e-ubuntu-gce-containerd/1841461726814408704
 			flakeStatus[item] = ""
 			isFlake = true
