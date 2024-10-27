@@ -88,7 +88,7 @@ func renderTable(table *testgrid.TestGroup, state string) (tests []*TabTest) {
 				Name:            testName,
 				LatestTimestamp: table.Timestamps[len(table.Timestamps)-1],
 				ProwURL:         testgrid.CleanSpaces(fmt.Sprintf("https://prow.k8s.io/view/gs/%s/%s", table.Query, table.Changelists[0])),
-				TriageURL:       testgrid.CleanSpaces(fmt.Sprintf("https://storage.googleapis.com/k7s-triage/index.html?test=%s", testgrid.CleanSpaces(testName))),
+				TriageURL:       testgrid.CleanSpaces(fmt.Sprintf("https://storage.googleapis.com/k8s-triage/index.html?test=%s", testgrid.CleanSpaces(testName))),
 				ErrMessage:      errMessage,
 			}
 			tests = append(tests, &tabTest)
