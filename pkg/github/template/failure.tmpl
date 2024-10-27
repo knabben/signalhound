@@ -1,0 +1,30 @@
+### Which jobs are failing?
+
+{{.Failing}}
+
+### Which tests are failing?
+
+{{.Test}}
+> Kubernetes e2e suite.[It] [sig-node] [Serial] Pod InPlace Resize Container (scheduler-focused) [Feature:InPlacePodVerticalScaling] pod-resize-scheduler-tests[Changes](https://github.com/kubernetes/kubernetes/compare/de7e1e7b2...0daa75b97?)
+
+### Since when has it been failing?
+
+{{.FirstFailure}}
+{{.LastFailure}}
+
+### Testgrid link
+
+{{.TestGridLink}}
+
+### Reason for failure (if possible)
+
+{{.Reason}}
+
+### Anything else we need to know?
+
+N/A
+
+### Relevant SIG(s)
+
+{{.Sigs}}
+cc @kubernetes/release-team-release-signal

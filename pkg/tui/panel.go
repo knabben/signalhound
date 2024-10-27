@@ -15,34 +15,34 @@ var (
 
 	keyStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF0000"))
 	bold     = lipgloss.NewStyle().Bold(true).
-		Foreground(lipgloss.Color("#ff8787")).
-		Width(200).TabWidth(4)
+			Foreground(lipgloss.Color("#ff8787")).
+			Width(200).TabWidth(4)
 	style = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#300a57")).
 		Background(lipgloss.Color("#fbf7ff")).
 		Width(250).TabWidth(2).Padding(2)
 )
 
-func Render(tab string, dashboard *testgrid.Dashboard, url string, counter int) error {
+func (d *DashboardIssue) RenderVisual(counter int) error {
 	var (
 		failingThreshold, flakeThreshold = 2, 3
 		flakeStatus                      = make(map[string]string)
 		isFlake                          bool
 	)
 
-	url = strings.ReplaceAll(strings.ReplaceAll(url, "/summary", "#"+tab+"&exclude-non-failed-tests="), " ", "%20")
+	//url = testgrid.RenderURL(url, tab)
 	tg := testgrid.NewTestGrid()
-	result, err := tg.FetchTable(dashboard.DashboardName, tab)
+	result, err := tg.FetchTable(d.Dashboard.DashboardName, d.Tab)
 	if err != nil {
 		return err
 	}
 
 	icon, state := "🟪", "Flaking"
-	if dashboard.OverallStatus == testgrid.FAILING_STATUS {
+	if d.Dashboard.OverallStatus == testgrid.FAILING_STATUS {
 		icon, state = "🟥", "Failing"
 
 	}
-	testAgg := fmt.Sprintf("%s#%s", dashboard.DashboardName, tab)
+	testAgg := fmt.Sprintf("%s#%s", d.Dashboard.DashboardName, d.Tab)
 	boardLink := fmt.Sprintf("https://testgrid.k8s.io/%s&exclude-non-failed-tests=", testAgg)
 
 	for _, test := range result.Tests {
@@ -51,7 +51,7 @@ func Render(tab string, dashboard *testgrid.Dashboard, url string, counter int) 
 		prowURL := fmt.Sprintf("https://prow.k8s.io/view/gs/%s/%s", result.Query, result.Changelists[0])
 
 		_, num := RenderStatuses(&test, result.Timestamps)
-		if (num >= failingThreshold && dashboard.OverallStatus == testgrid.FAILING_STATUS) || (num >= flakeThreshold && dashboard.OverallStatus == testgrid.FLAKY_STATUS) {
+		if (num >= failingThreshold && d.Dashboard.OverallStatus == testgrid.FAILING_STATUS) || (num >= flakeThreshold && d.Dashboard.OverallStatus == testgrid.FLAKY_STATUS) {
 			testName := test.Name
 			if strings.Contains(test.Name, "Kubernetes e2e suite.[It]") {
 				params := getParameter(testRegex, testName)
@@ -68,8 +68,8 @@ func Render(tab string, dashboard *testgrid.Dashboard, url string, counter int) 
 	}
 
 	if isFlake {
-		params := getParameter(summaryRegex, dashboard.Status)
-		fmt.Println(style.Render(fmt.Sprintf("%d) %s %s \t\t\t %s", counter, params["PERCENT"], boardLink, url)))
+		params := getParameter(summaryRegex, d.Dashboard.Status)
+		fmt.Println(style.Render(fmt.Sprintf("%d) %s %s \t\t\t %s", counter, d.Dashboard.DashboardName, params["PERCENT"], boardLink)))
 		fmt.Println("")
 		for item, _ := range flakeStatus {
 			fmt.Println(bold.Render(item))
