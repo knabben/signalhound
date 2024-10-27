@@ -23,11 +23,13 @@ var abstractCmd = &cobra.Command{
 				log.Fatal("ERROR ", err)
 			}
 
+			var counter = 0
 			for tab, dashboard := range *summary.Dashboards {
 				if hasStatus(dashboard.OverallStatus, []string{testgrid.FAILING_STATUS, testgrid.FLAKY_STATUS}) {
-					if err := tui.Render(tab, dashboard, summary.URL); err != nil {
+					if err := tui.Render(tab, dashboard, summary.URL, counter+1); err != nil {
 						return err
 					}
+					counter += 1
 				}
 			}
 		}
