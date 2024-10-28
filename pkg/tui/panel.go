@@ -139,7 +139,7 @@ func contentRender(tab *DashboardTab, i int) {
 			githubPanel.SetBorderColor(tcell.ColorBlue)
 			app.SetFocus(brokenPanel)
 		}
-		if event.Key() == tcell.KeyEscape || event.Key() == tcell.KeyUp {
+		if event.Key() == tcell.KeyEscape {
 			slackPanel.SetText("", false)
 			githubPanel.SetText("", false)
 			app.SetFocus(brokenPanel)
