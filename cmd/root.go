@@ -8,7 +8,6 @@ import (
 )
 
 var (
-	tg           = testgrid.NewTestGrid()
 	testBoards   = []string{"sig-release-master-blocking", "sig-release-master-informing"}
 	brokenStatus = []string{testgrid.FAILING_STATUS, testgrid.FLAKY_STATUS}
 	rootCmd      = &cobra.Command{

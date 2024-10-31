@@ -36,9 +36,7 @@ type TabTest struct {
 
 var minFailure, minFlake = 2, 3
 
-var tg = testgrid.NewTestGrid()
-
-func RenderFromSummary(summary *testgrid.Summary, failures []string) (dashboardTabs []*DashboardTab) {
+func RenderFromSummary(tg *testgrid.TestGrid, summary *testgrid.Summary, failures []string) (dashboardTabs []*DashboardTab) {
 	for tab, dashboard := range *summary.Dashboards {
 		if hasStatus(dashboard.OverallStatus, failures) {
 			table, err := tg.FetchTable(dashboard.DashboardName, tab)

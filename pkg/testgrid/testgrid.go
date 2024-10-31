@@ -19,11 +19,14 @@ type TestGridInterface interface {
 	FetchTable(dashboard, tab string) (*TestGroup, error)
 }
 
-func NewTestGrid() TestGridInterface {
-	return &TestGrid{TestGridURL: URL}
+func NewTestGrid(serverURL string) TestGridInterface {
+	if serverURL == "" {
+		serverURL = URL
+	}
+	return &TestGrid{TestGridURL: serverURL}
 }
 
-func (t TestGrid) FetchSummary(dashboard string) (*Summary, error) {
+func (t *TestGrid) FetchSummary(dashboard string) (*Summary, error) {
 	var (
 		dashboardList = &DashboardMap{}
 		data          []byte
@@ -43,7 +46,7 @@ func (t TestGrid) FetchSummary(dashboard string) (*Summary, error) {
 	return &Summary{URL: url, Dashboards: dashboardList}, nil
 }
 
-func (t TestGrid) FetchTable(dashboard, tab string) (*TestGroup, error) {
+func (t *TestGrid) FetchTable(dashboard, tab string) (*TestGroup, error) {
 	var (
 		testGroup = &TestGroup{}
 		data      []byte
