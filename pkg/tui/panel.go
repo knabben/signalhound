@@ -7,9 +7,7 @@ import (
 	"github.com/rivo/tview"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	"log"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -98,7 +96,10 @@ func contentRender(tab *DashboardTab, i int) {
 	slackPanel.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyCtrlSpace {
 			position.SetText("[blue]COPIED [yellow]SLACK [blue]TO THE CLIPBOARD!")
-			CopyToClipboard(slackPanel.GetText())
+			if err := CopyToClipboard(githubPanel.GetText()); err != nil {
+				position.SetText(fmt.Sprintf("[red]error: %v", err.Error()))
+				return event
+			}
 			slackPanel.SetBorderColor(tcell.ColorBlue)
 			app.SetFocus(brokenPanel)
 		}
@@ -126,16 +127,23 @@ func contentRender(tab *DashboardTab, i int) {
 		FirstFailure: firstTS,
 		LastFailure:  lastTS,
 	}
-	templateFile := "flake.tmpl"
+	templateFile := "template/flake.tmpl"
 	if tab.Status == testgrid.FAILING_STATUS {
-		templateFile = "failure.tmpl"
+		templateFile = "template/failure.tmpl"
 	}
-	template, _ := tab.renderTemplate(issue, filepath.Join("pkg/tui/template/", templateFile))
+	template, err := tab.renderTemplate(issue, templateFile)
+	if err != nil {
+		position.SetText(fmt.Sprintf("[red]error: %v", err.Error()))
+		return
+	}
 	githubPanel.SetText(template.String(), false)
 	githubPanel.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyCtrlSpace {
 			position.SetText("[blue]COPIED [yellow]ISSUE [blue]TO THE CLIPBOARD!")
-			CopyToClipboard(githubPanel.GetText())
+			if err := CopyToClipboard(githubPanel.GetText()); err != nil {
+				position.SetText(fmt.Sprintf("[red]error: %v", err.Error()))
+				return event
+			}
 			githubPanel.SetBorderColor(tcell.ColorBlue)
 			app.SetFocus(brokenPanel)
 		}
@@ -151,10 +159,8 @@ func contentRender(tab *DashboardTab, i int) {
 	})
 }
 
-func CopyToClipboard(text string) {
+func CopyToClipboard(text string) error {
 	args := "echo '" + text + "' | clip.exe"
 	cmd := exec.Command("bash", "-c", args)
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
+	return cmd.Run()
 }

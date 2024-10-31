@@ -2,8 +2,12 @@ package tui
 
 import (
 	"bytes"
+	"embed"
 	"text/template"
 )
+
+//go:embed template/*
+var tmplFolder embed.FS
 
 type IssueTemplate struct {
 	BoardName    string
@@ -19,11 +23,12 @@ type IssueTemplate struct {
 }
 
 func (d *DashboardTab) renderTemplate(issue *IssueTemplate, templateFile string) (output bytes.Buffer, err error) {
-	var file *template.Template
-	if file, err = template.ParseFiles(templateFile); err != nil {
+	var tmpl *template.Template
+	tmpl, err = template.ParseFS(tmplFolder, templateFile)
+	if err != nil {
 		return output, err
 	}
-	if err = file.Execute(&output, issue); err != nil {
+	if err = tmpl.Execute(&output, issue); err != nil {
 		return output, err
 	}
 	return
