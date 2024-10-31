@@ -20,7 +20,6 @@ func init() {
 
 func RunAbstract(cmd *cobra.Command, args []string) error {
 	var allTabs []*tui.DashboardTab
-
 	fmt.Println("Scrapping the testgrid dashboard...")
 	for _, dashboard := range testBoards {
 		//render each board summary

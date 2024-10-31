@@ -134,12 +134,14 @@ type Test struct {
 	LinkedBugs   []interface{} `json:"linked_bugs"`
 	Messages     []string      `json:"messages"`
 	ShortTexts   []string      `json:"short_texts"`
-	Statuses     []struct {
-		Count int `json:"count"`
-		Value int `json:"value"`
-	} `json:"statuses"`
-	Target       string      `json:"target"`
-	UserProperty interface{} `json:"user_property"`
+	Statuses     []Statuses    `json:"statuses"`
+	Target       string        `json:"target"`
+	UserProperty interface{}   `json:"user_property"`
+}
+
+type Statuses struct {
+	Count int `json:"count"`
+	Value int `json:"value"`
 }
 
 func (te *Test) RenderStatuses(timestamps []int64) (string, int, int) {
