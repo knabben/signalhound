@@ -34,4 +34,23 @@ func Test_FetchSummary(t *testing.T) {
 	}
 }
 
-func Test_FetchTable(*testing.T) {}
+func Test_FetchTable(t *testing.T) {
+	response := ` 
+    {
+      "test-group-name":"cikubernetese2ecapzmasterwindows",
+	  "query":"kubernetes-ci-logs/logs/ci-kubernetes-e2e-capz-master-windows",
+      "status":"Served from cache in 0.16 seconds"
+	}
+	`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(response))
+	}))
+
+	defer server.Close()
+	tg := NewTestGrid(server.URL)
+	testGroup, err := tg.FetchTable("dashboard-test", "tab-test")
+	assert.NoError(t, err)
+	assert.Equal(t, testGroup.TestGroupName, "cikubernetese2ecapzmasterwindows")
+	assert.Contains(t, testGroup.Query, "ci-kubernetes-e2e-capz-master-windows")
+}
