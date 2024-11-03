@@ -34,9 +34,7 @@ type TabTest struct {
 	ErrMessage      string
 }
 
-var minFailure, minFlake = 2, 3
-
-func RenderFromSummary(tg *testgrid.TestGrid, summary *testgrid.Summary, failures []string) (dashboardTabs []*DashboardTab) {
+func RenderFromSummary(tg *testgrid.TestGrid, summary *testgrid.Summary, failures []string, minFailure, minFlake int) (dashboardTabs []*DashboardTab) {
 	for tab, dashboard := range *summary.Dashboards {
 		if hasStatus(dashboard.OverallStatus, failures) {
 			table, err := tg.FetchTable(dashboard.DashboardName, tab)
@@ -44,7 +42,7 @@ func RenderFromSummary(tg *testgrid.TestGrid, summary *testgrid.Summary, failure
 				_ = fmt.Errorf("error fetching table : %s", err)
 				continue
 			}
-			dashboardTab := NewDashboardTab(summary.URL, tab, dashboard, table)
+			dashboardTab := NewDashboardTab(summary.URL, tab, dashboard, table, minFailure, minFlake)
 			if len(dashboardTab.Tests) > 0 {
 				dashboardTabs = append(dashboardTabs, dashboardTab)
 			}
@@ -53,7 +51,7 @@ func RenderFromSummary(tg *testgrid.TestGrid, summary *testgrid.Summary, failure
 	return
 }
 
-func NewDashboardTab(URL string, tab string, dashboard *testgrid.Dashboard, table *testgrid.TestGroup) *DashboardTab {
+func NewDashboardTab(URL string, tab string, dashboard *testgrid.Dashboard, table *testgrid.TestGroup, minFailure, minFlake int) *DashboardTab {
 	dash := DashboardTab{URL: URL, Tab: tab, Dashboard: dashboard}
 	aggregation := fmt.Sprintf("%s#%s", dashboard.DashboardName, tab)
 	dash.BoardURL = testgrid.CleanSpaces(fmt.Sprintf("https://testgrid.k8s.io/%s&exclude-non-failed-tests=", aggregation))
@@ -63,11 +61,11 @@ func NewDashboardTab(URL string, tab string, dashboard *testgrid.Dashboard, tabl
 	if dashboard.OverallStatus == testgrid.FAILING_STATUS {
 		dash.Icon = ":large_red_square:"
 	}
-	dash.Tests = renderTable(table, dash.State)
+	dash.Tests = renderTable(table, dash.State, minFailure, minFlake)
 	return &dash
 }
 
-func renderTable(table *testgrid.TestGroup, state string) (tests []*TabTest) {
+func renderTable(table *testgrid.TestGroup, state string, minFailure, minFlake int) (tests []*TabTest) {
 	for _, test := range table.Tests {
 		testName := test.Name
 		if strings.Contains(test.Name, e2eSuitePrefix) {

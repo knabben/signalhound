@@ -15,10 +15,15 @@ var abstractCmd = &cobra.Command{
 	RunE:  RunAbstract,
 }
 
-var tg = testgrid.NewTestGrid("")
+var (
+	tg                   = testgrid.NewTestGrid("")
+	minFailure, minFlake int
+)
 
 func init() {
 	rootCmd.AddCommand(abstractCmd)
+	abstractCmd.PersistentFlags().IntVarP(&minFailure, "min-failure", "f", 2, "minimum threshold for test failures")
+	abstractCmd.PersistentFlags().IntVarP(&minFlake, "min-flake", "m", 3, "minimum threshold for test flakeness")
 }
 
 func RunAbstract(cmd *cobra.Command, args []string) error {
@@ -31,7 +36,7 @@ func RunAbstract(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		// renders the final board summary with tests
-		fromSummary := tui.RenderFromSummary(tg.(*testgrid.TestGrid), summary, brokenStatus)
+		fromSummary := tui.RenderFromSummary(tg.(*testgrid.TestGrid), summary, brokenStatus, minFailure, minFlake)
 		allTabs = append(allTabs, fromSummary...)
 	}
 	return tui.RenderVisual(allTabs)
