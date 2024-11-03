@@ -2,67 +2,86 @@ package github
 
 import (
 	"context"
-	gh "github.com/google/go-github/v65/github"
+	"errors"
+	g3 "github.com/google/go-github/v65/github"
+	g4 "github.com/shurcooL/githubv4"
+	"golang.org/x/oauth2"
 	"strings"
 )
 
-const OWNER = "kubernetes"
+// projectID is the Kubernetes CI Signal board - CI Signal (SIG Release / Release Team)
+const projectID = "PVT_kwDOAM_34M4AAThW"
 
-// Github is a Github connections and general metadata holder
-type Github struct {
+// GitHub is a GitHub connection management and general metadata holder
+type GitHub struct {
 	// ctx is shared context
 	ctx context.Context
-	// client is the official github client
-	client *gh.Client
+
+	// ClientV3 (deprecated) is the official GitHub API v3 client
+	ClientV3 *g3.Client
 	// owner is a global repository owner
 	owner string
 	// workflowFile is the global workflow file used to extrac and trigger runs
 	workflowFile string
 	// branch is the global reference used to trigget new runs
 	branch string
+
+	// ClientV4 is the official GitHub API v4 client
+	ClientV4 *g4.Client
 }
 
 // Repository represents a repo abstractions and runs for the workflow
 type Repository struct {
-	github *Github
-	// repo is the github repository object
-	repo *gh.Repository
+	github *GitHub
+	// repo is the GitHub repository object
+	repo *g3.Repository
 	// runs holds the latest scraped runs for a workflow
-	runs []*gh.WorkflowRun
+	runs []*g3.WorkflowRun
 }
 
-type GitHubInterface interface {
-	GetRepositories(filter string, perPage int) ([]*gh.Repository, error)
+type Interface interface {
+	CreateDraftIssue(title, body string) error
+	GetRepositories(filter string, perPage int) ([]*g3.Repository, error)
 }
 
 type RepositoryInterface interface {
-	getWorkflow() (*gh.Workflow, error)
+	getWorkflow() (*g3.Workflow, error)
 	TriggerNewRun() error
-	GetWorkflowRuns(perPage int) ([]*gh.WorkflowRun, error)
-	GetWorkflowLogs(runID string) string
+	GetWorkflowRuns(perPage int) ([]*g3.WorkflowRun, error)
 }
 
 // NewGithub returns a new GitHub object with metadata set
-func NewGithub(ctx context.Context, client *gh.Client, workflowFile, owner, branch string) GitHubInterface {
-	return &Github{ctx: ctx, client: client, workflowFile: workflowFile, owner: owner, branch: branch}
+func NewGithub(ctx context.Context, token string) Interface {
+	httpClient := oauth2.NewClient(ctx, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}))
+	return &GitHub{ctx: ctx, ClientV4: g4.NewClient(httpClient)}
 }
 
 // NewRepository returns a new internal Repository abstraction
-func NewRepository(github *Github, repo *gh.Repository) RepositoryInterface {
+func NewRepository(github *GitHub, repo *g3.Repository) RepositoryInterface {
 	return &Repository{github: github, repo: repo}
 }
 
 func (r *Repository) TriggerNewRun() error {
-	// todo(knabben) - Inputs must be provide by specialized workflows, check from template
-	event := gh.CreateWorkflowDispatchEventRequest{Ref: r.github.branch}
-	_, err := r.github.client.Actions.CreateWorkflowDispatchEventByFileName(r.github.ctx, r.github.owner, *r.repo.Name, r.github.workflowFile, event)
+	if r.github.ClientV3 == nil {
+		return errors.New("github client is nil")
+	}
+	event := g3.CreateWorkflowDispatchEventRequest{Ref: r.github.branch}
+	_, err := r.github.ClientV3.Actions.CreateWorkflowDispatchEventByFileName(
+		r.github.ctx, r.github.owner, *r.repo.Name, r.github.workflowFile, event,
+	)
 	return err
 }
 
 // GetWorkflowRuns returns the list of workflows for a specific repository
-func (r *Repository) GetWorkflowRuns(perPage int) ([]*gh.WorkflowRun, error) {
-	opts := &gh.ListWorkflowRunsOptions{ListOptions: gh.ListOptions{PerPage: perPage}}
-	runs, _, err := r.github.client.Actions.ListWorkflowRunsByFileName(r.github.ctx, r.github.owner, *r.repo.Name, r.github.workflowFile, opts)
+func (r *Repository) GetWorkflowRuns(perPage int) ([]*g3.WorkflowRun, error) {
+	if r.github.ClientV3 == nil {
+		return nil, errors.New("github client is nil")
+	}
+
+	opts := &g3.ListWorkflowRunsOptions{ListOptions: g3.ListOptions{PerPage: perPage}}
+	runs, _, err := r.github.ClientV3.Actions.ListWorkflowRunsByFileName(
+		r.github.ctx, r.github.owner, *r.repo.Name, r.github.workflowFile, opts,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -70,34 +89,50 @@ func (r *Repository) GetWorkflowRuns(perPage int) ([]*gh.WorkflowRun, error) {
 	return r.runs, nil
 }
 
-func (r *Repository) getWorkflow() (*gh.Workflow, error) {
-	workflow, _, err := r.github.client.Actions.GetWorkflowByFileName(r.github.ctx, r.github.owner, r.repo.GetName(), r.github.workflowFile)
+func (r *Repository) getWorkflow() (*g3.Workflow, error) {
+	if r.github.ClientV3 == nil {
+		return nil, errors.New("github client is nil")
+	}
+
+	workflow, _, err := r.github.ClientV3.Actions.GetWorkflowByFileName(
+		r.github.ctx, r.github.owner, r.repo.GetName(), r.github.workflowFile,
+	)
 	return workflow, err
 }
 
-// GetWorkflowLogs extract Logs from the latest job and print
-func (r *Repository) GetWorkflowLogs(runID string) string {
-	var parsedURL string
-	// todo(knabben) - missing implementation
-	/*
-		jobs, _, _ := client.Actions.ListWorkflowJobs(ctx, OWNER, repo.GetName(), runID, &gh.ListWorkflowJobsOptions{})
-		for _, j := range jobs.Jobs {
-			jobID := j.ID
-			parsedURL, _, _ := client.Actions.GetWorkflowJobLogs(ctx, OWNER, repo.GetName(), *jobID, 1)
-		}
-	*/
-	return parsedURL
+// CreateDraftIssue creates a new issue draft issue in the board with a
+// specific test issue template.
+func (g *GitHub) CreateDraftIssue(title, body string) error {
+	var m struct {
+		AddProjectV2DraftIssue struct {
+			ProjectItem struct {
+				ID g4.ID
+			}
+		} `graphql:"addProjectV2DraftIssue(input: $input)"`
+	}
+	bp := g4.String(body)
+	return g.ClientV4.Mutate(context.Background(), &m,
+		g4.AddProjectV2DraftIssueInput{
+			ProjectID: projectID,
+			Title:     g4.String(title),
+			Body:      &bp,
+		}, nil,
+	)
 }
 
 // GetRepositories returns the list of filtered repositories by the filter arguments
-func (g *Github) GetRepositories(filter string, perPage int) (filteredRepos []*gh.Repository, err error) {
-	opts := &gh.RepositoryListByAuthenticatedUserOptions{ListOptions: gh.ListOptions{PerPage: perPage}}
+func (g *GitHub) GetRepositories(filter string, perPage int) (filteredRepos []*g3.Repository, err error) {
+	if g.ClientV3 == nil {
+		return nil, errors.New("github client is nil")
+	}
+
+	opts := &g3.RepositoryListByAuthenticatedUserOptions{ListOptions: g3.ListOptions{PerPage: perPage}}
 	for {
 		var (
-			repositories []*gh.Repository
-			resp         *gh.Response
+			repositories []*g3.Repository
+			resp         *g3.Response
 		)
-		repositories, resp, err = g.client.Repositories.ListByAuthenticatedUser(g.ctx, opts)
+		repositories, resp, err = g.ClientV3.Repositories.ListByAuthenticatedUser(g.ctx, opts)
 		if err != nil {
 			return nil, err
 		}
