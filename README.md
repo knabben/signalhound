@@ -16,3 +16,11 @@ To copy for your clipboard the content of the windows pick one of the Windows an
 currently only working on WSL2.
 
 ![screen](https://github.com/user-attachments/assets/82b55880-dcf5-474c-bd3d-e0f67617a253)
+
+## GitHub Issue Drafting
+
+It's possible to draft an issue automatically in the [CI Signal Board](https://github.com/orgs/kubernetes/projects/68/views/36).
+
+The Draft issue appears in the DRAFTING section down the first view after the user selecting the panel and pressing `CTRL-b`.
+
+To enable the functionality set a Personal Access Token (PAT) with the proper permissions.

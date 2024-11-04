@@ -103,21 +103,52 @@ func (r *Repository) getWorkflow() (*g3.Workflow, error) {
 // CreateDraftIssue creates a new issue draft issue in the board with a
 // specific test issue template.
 func (g *GitHub) CreateDraftIssue(title, body string) error {
-	var m struct {
+	var mutationDraft struct {
 		AddProjectV2DraftIssue struct {
 			ProjectItem struct {
 				ID g4.ID
 			}
 		} `graphql:"addProjectV2DraftIssue(input: $input)"`
 	}
-	bp := g4.String(body)
-	return g.ClientV4.Mutate(context.Background(), &m,
-		g4.AddProjectV2DraftIssueInput{
+	bodyInput := g4.String(body)
+	inputDraft := g4.AddProjectV2DraftIssueInput{
+		ProjectID: projectID,
+		Title:     g4.String(title),
+		Body:      &bodyInput,
+	}
+	// mutation for creating a draft issue in the Signal CI board
+	if err := g.ClientV4.Mutate(context.Background(), &mutationDraft, inputDraft, nil); err != nil {
+		return err
+	}
+
+	itemID := mutationDraft.AddProjectV2DraftIssue.ProjectItem.ID
+
+	// iterate in the draft issue items and update each field for
+	// latest view. Single select field (like K8s Version) needs
+	// to be updated automatically.
+
+	fields := map[string]g4.String{
+		"PVTSSF_lADOAM_34M4AAThWzgAKb0I": g4.String("fb5648b7"), // v1.32 - K8s Release - ProjectV2SingleSelectField
+		"PVTSSF_lADOAM_34M4AAThWzgAtHfg": g4.String("3edeeefb"), // issue-tracking - view - ProjectV2SingleSelectField
+		"PVTSSF_lADOAM_34M4AAThWzgAKbaA": g4.String("179de113"), // drafting - Status - ProjectV2SingleSelectField
+	}
+
+	var mutationUpdate struct {
+		UpdateProjectV2ItemFieldValue struct {
+			ClientMutationID string
+		} `graphql:"updateProjectV2ItemFieldValue(input: $input)"`
+	}
+	for key, field := range fields {
+		if err := g.ClientV4.Mutate(context.Background(), &mutationUpdate, g4.UpdateProjectV2ItemFieldValueInput{
 			ProjectID: projectID,
-			Title:     g4.String(title),
-			Body:      &bp,
-		}, nil,
-	)
+			ItemID:    itemID,
+			FieldID:   key,
+			Value:     g4.ProjectV2FieldValue{SingleSelectOptionID: &field},
+		}, nil); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // GetRepositories returns the list of filtered repositories by the filter arguments
