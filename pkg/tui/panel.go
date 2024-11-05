@@ -92,7 +92,7 @@ func updateSlackPanel(tab *DashboardTab, currentTest *TabTest) {
 	slackPanel.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyCtrlSpace {
 			position.SetText("[blue]COPIED [yellow]SLACK [blue]TO THE CLIPBOARD!")
-			if err := CopyToClipboard(githubPanel.GetText()); err != nil {
+			if err := CopyToClipboard(slackPanel.GetText()); err != nil {
 				position.SetText(fmt.Sprintf("[red]error: %v", err.Error()))
 				return event
 			}
