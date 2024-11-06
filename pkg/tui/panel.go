@@ -54,7 +54,7 @@ func RenderVisual(tabs []*DashboardTab, githubToken string) error {
 		AddItem(position, 3, 0, 1, 2, 0, 0, false)
 
 	for _, tab := range tabs {
-		tabsPanel.AddItem(tab.BoardHash, "", 0, func() {
+		tabsPanel.AddItem(fmt.Sprintf("[%s] %s", tab.Icon, tab.BoardHash), "", 0, func() {
 			brokenPanel.Clear()
 			for _, test := range tab.Tests {
 				brokenPanel.AddItem(test.Name, "", 0, nil)
@@ -129,7 +129,7 @@ func updateGitHubPanel(tab *DashboardTab, currentTest *TabTest, token string) {
 
 	// pick the correct template by failure status
 	templateFile, prefixTitle := "template/flake.tmpl", "Flaking Test"
-	if tab.Status == testgrid.FAILING_STATUS {
+	if tab.State == testgrid.FAILING_STATUS {
 		templateFile, prefixTitle = "template/failure.tmpl", "Failing Test"
 	}
 	template, err := tab.renderTemplate(issue, templateFile)

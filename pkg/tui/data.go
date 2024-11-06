@@ -58,7 +58,7 @@ func NewDashboardTab(URL string, tab string, dashboard *testgrid.Dashboard, tabl
 	dash.BoardHash = aggregation
 	dash.State = dashboard.OverallStatus
 	dash.Icon = ":large_purple_square:"
-	if dashboard.OverallStatus == testgrid.FAILING_STATUS {
+	if dash.State == testgrid.FAILING_STATUS {
 		dash.Icon = ":large_red_square:"
 	}
 	dash.Tests = renderTable(table, dash.State, minFailure, minFlake)
