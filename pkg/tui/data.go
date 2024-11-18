@@ -2,8 +2,8 @@ package tui
 
 import (
 	"fmt"
+	"github.com/knabben/stalker/pkg/prow"
 	"github.com/knabben/stalker/pkg/testgrid"
-	"regexp"
 	"strings"
 )
 
@@ -69,7 +69,7 @@ func renderTable(table *testgrid.TestGroup, state string, minFailure, minFlake i
 	for _, test := range table.Tests {
 		testName := test.Name
 		if strings.Contains(test.Name, e2eSuitePrefix) {
-			testName = getParameter(testRegex, testName)["TEST"]
+			testName = prow.GetRegexParameter(testRegex, testName)["TEST"]
 		}
 		errMessage, failures, firstFailure := test.RenderStatuses(table.Timestamps)
 		if (failures >= minFailure && state == testgrid.FAILING_STATUS) || (failures >= minFlake && state == testgrid.FLAKY_STATUS) {
@@ -94,16 +94,4 @@ func hasStatus(boardStatus string, statuses []string) bool {
 		}
 	}
 	return false
-}
-
-func getParameter(regEx, value string) (paramsMap map[string]string) {
-	var r = regexp.MustCompile(regEx)
-	match := r.FindStringSubmatch(value)
-	paramsMap = make(map[string]string)
-	for i, name := range r.SubexpNames() {
-		if i > 0 && i <= len(match) {
-			paramsMap[name] = match[i]
-		}
-	}
-	return paramsMap
 }
