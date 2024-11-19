@@ -19,7 +19,18 @@ currently only working on WSL2.
 
 ![screen](https://github.com/user-attachments/assets/82b55880-dcf5-474c-bd3d-e0f67617a253)
 
-## GitHub Issue Drafting
+## Features
+
+### AI Augmented Reality
+
+Debugging and identifying the root cause of a problem can be challenging. 
+This tool can integrate with well-known LLM machinery APIs and provide automated insights into specific issues.
+
+First set the environment variable `OPENAI_API_KEY` with a token generated in the portal, read the 
+[official documentation](https://platform.openai.com/docs/api-reference/authentication) to learn how generate a new
+token.
+
+### GitHub Issue Drafting
 
 It's possible to draft an issue automatically in the [CI Signal Board](https://github.com/orgs/kubernetes/projects/68/views/36).
 
