@@ -1,4 +1,4 @@
-name: principal
+name: tests
 
 on:
   push:

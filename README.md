@@ -1,3 +1,5 @@
+[![tests](https://github.com/knabben/stalker/actions/workflows/tests.yml/badge.svg)](https://github.com/knabben/stalker/actions/workflows/tests.yml)
+
 ## Kubernetes Signal Stalker
 
 Stalk and Hunt for Flake tests on Testgrid Dashboards
