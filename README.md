@@ -30,6 +30,11 @@ First set the environment variable `OPENAI_API_KEY` with a token generated in th
 [official documentation](https://platform.openai.com/docs/api-reference/authentication) to learn how generate a new
 token.
 
+On the bottom panel check the initial prompt and use `Ctrl-B` to call the OpenAI API with the panel text, `Ctrl-Space`
+will copy over the final content to your clipboard.
+
+![openai](https://github.com/user-attachments/assets/2f8b3418-1996-443b-810e-992f8ab9ac31)
+
 ### GitHub Issue Drafting
 
 It's possible to draft an issue automatically in the [CI Signal Board](https://github.com/orgs/kubernetes/projects/68/views/36).
