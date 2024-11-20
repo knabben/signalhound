@@ -21,7 +21,8 @@ type Prow struct {
 
 // BuildLog holds the build log
 type BuildLog struct {
-	Error string
+	Error   string
+	LensURL string
 }
 
 type ProwInterface interface {
@@ -54,7 +55,12 @@ func (t *Prow) GetSpyGlassLens() (*BuildLog, error) {
 	if body, err = getHTTPResponse(lensURL); err != nil {
 		return nil, err
 	}
-	return extractBuildLogs(body)
+	buildLog, err := extractBuildLogs(body)
+	if err != nil {
+		return nil, err
+	}
+	buildLog.LensURL = lensURL
+	return buildLog, nil
 }
 
 // extractBuildLogs returns the buildlog serialization error logs from

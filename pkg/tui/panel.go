@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/knabben/stalker/pkg/github"
+	"github.com/knabben/stalker/pkg/llm"
+	"github.com/knabben/stalker/pkg/prow"
 	"github.com/knabben/stalker/pkg/testgrid"
 	"github.com/rivo/tview"
 	"golang.org/x/text/cases"
@@ -19,40 +21,53 @@ var (
 	app         *tview.Application // The tview application.
 	pages       *tview.Pages       // The application pages.
 	brokenPanel = tview.NewList()
-	position    = tview.NewTextView()
 	slackPanel  = tview.NewTextArea()
+	openaiPanel = tview.NewTextArea()
 	githubPanel = tview.NewTextArea()
+	position    = tview.NewTextView()
 )
 
-var positionText = "[yellow]Select a content Windows and press [blue]Ctrl-Space [yellow]to COPY or press [blue]Ctrl-C [yellow]to exit"
-
+// RenderVisual loads the entire grid and componnents in the app.
+// this is a blocking functions.
 func RenderVisual(tabs []*DashboardTab, githubToken string) error {
 	app = tview.NewApplication()
 
-	// Render tab
+	// Render tab in the first row
 	tabsPanel := tview.NewList().ShowSecondaryText(false)
 	tabsPanel.SetBorder(true).SetTitle("Board#Tabs")
-
-	// Final issue rendering
-	slackPanel.SetBorder(true).SetTitle("Slack Message")
-	slackPanel.SetWrap(true).SetDisabled(true)
-	githubPanel.SetBorder(true).SetTitle("Github Issue")
-	githubPanel.SetWrap(true)
 
 	// Broken tests in the tab
 	brokenPanel.ShowSecondaryText(false).SetDoneFunc(func() { app.SetFocus(tabsPanel) })
 	brokenPanel.SetBorder(true).SetTitle("Tests")
 
+	// Slack Final issue rendering
+	slackPanel.SetBorder(true).SetTitle("Slack Message")
+	slackPanel.SetWrap(true).SetDisabled(true)
+
+	// OpenAI Panel rendering
+	openaiPanel.SetBorder(true).SetTitle("LLM Message")
+	openaiPanel.SetWrap(true).SetDisabled(false)
+
+	// GitHub panel rendering
+	githubPanel.SetBorder(true).SetTitle("Github Issue")
+	githubPanel.SetWrap(true)
+
+	// Final position bottom panel for information
+	var positionText = "[yellow]Select a content Windows and press [blue]Ctrl-Space [yellow]to COPY or press [blue]Ctrl-C [yellow]to exit"
 	position.SetDynamicColors(true).SetTextAlign(tview.AlignCenter).SetText(positionText)
 
-	// Create the layout.
-	grid := tview.NewGrid().SetRows(13, 13, 0, 1).
+	// Create the grid layout
+	grid := tview.NewGrid().SetRows(10, 10, 0, 0, 1).
 		AddItem(tabsPanel, 0, 0, 1, 2, 0, 0, true).
 		AddItem(brokenPanel, 1, 0, 1, 2, 0, 0, false).
-		AddItem(slackPanel, 2, 0, 1, 1, 0, 0, false).
-		AddItem(githubPanel, 2, 1, 1, 1, 0, 0, false).
-		AddItem(position, 3, 0, 1, 2, 0, 0, false)
+		AddItem(position, 4, 0, 1, 2, 0, 0, false)
 
+	// Adding middle panel and split across rows and columns
+	grid.AddItem(slackPanel, 2, 0, 1, 1, 0, 0, false).
+		AddItem(openaiPanel, 3, 0, 1, 1, 0, 0, false).
+		AddItem(githubPanel, 2, 1, 2, 1, 0, 0, false)
+
+	// Tabs iteration for building the middle panels and actions settings
 	for _, tab := range tabs {
 		tabsPanel.AddItem(fmt.Sprintf("[%s] %s", tab.Icon, tab.BoardHash), "", 0, func() {
 			brokenPanel.Clear()
@@ -66,15 +81,18 @@ func RenderVisual(tabs []*DashboardTab, githubToken string) error {
 				slackPanel.SetBorderColor(tcell.ColorWhite)
 				githubPanel.SetBorderColor(tcell.ColorWhite)
 			})
+			// Broken panel rendering the function selection
 			brokenPanel.SetSelectedFunc(func(i int, testName string, t string, s rune) {
 				var currentTest = tab.Tests[i]
 				updateSlackPanel(tab, currentTest)
+				go updateOpenAIPanel(tab, currentTest)
 				updateGitHubPanel(tab, currentTest, githubToken)
 				app.SetFocus(slackPanel)
 			})
 		})
 	}
 
+	// Render the final page.
 	pages = tview.NewPages().AddPage(pagesName, grid, true, true)
 	return app.SetRoot(pages, true).EnableMouse(true).Run()
 }
@@ -102,10 +120,55 @@ func updateSlackPanel(tab *DashboardTab, currentTest *TabTest) {
 		if event.Key() == tcell.KeyEscape || event.Key() == tcell.KeyUp {
 			slackPanel.SetText("", false)
 			githubPanel.SetText("", false)
+			openaiPanel.SetText("", false)
 			app.SetFocus(brokenPanel)
 		}
 		if event.Key() == tcell.KeyRight {
 			app.SetFocus(githubPanel)
+		}
+		if event.Key() == tcell.KeyDown {
+			app.SetFocus(openaiPanel)
+		}
+		return event
+	})
+}
+
+// updateOpenAIPanel renders the OpenAI and Prow integration
+func updateOpenAIPanel(tab *DashboardTab, currentTest *TabTest) {
+	openaiPanel.SetText("Loading prow... Use Ctrl-B to search on OpenAI", false)
+	prowService := prow.NewProw(currentTest.ProwURL)
+	build, err := prowService.GetSpyGlassLens()
+	if err != nil {
+		position.SetText(fmt.Sprintf("[red]error: %v", err.Error()))
+		return
+	}
+	oai := llm.NewOpenAI()
+	prompt := oai.RenderText(currentTest.Name, build.Error)
+	openaiPanel.SetText(prompt, false)
+	openaiPanel.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyCtrlSpace {
+			position.SetText("[blue]COPIED [yellow]OPENAI [blue]TO THE CLIPBOARD!")
+			if err := CopyToClipboard(openaiPanel.GetText()); err != nil {
+				position.SetText(fmt.Sprintf("[red]error: %v", err.Error()))
+				return event
+			}
+			githubPanel.SetBorderColor(tcell.ColorBlue)
+			app.SetFocus(brokenPanel)
+		}
+		if event.Key() == tcell.KeyEscape || event.Key() == tcell.KeyUp {
+			slackPanel.SetText("", false)
+			githubPanel.SetText("", false)
+			openaiPanel.SetText("", false)
+			app.SetFocus(brokenPanel)
+		}
+		if event.Key() == tcell.KeyCtrlB {
+			response, err := oai.PromptRequest(prompt)
+			if err != nil {
+				position.SetText(fmt.Sprintf("[red]error: %v", err.Error()))
+				return event
+			}
+			openaiPanel.SetText(response, false)
+			openaiPanel.SetBorderColor(tcell.ColorBlue)
 		}
 		return event
 	})
@@ -166,9 +229,13 @@ func updateGitHubPanel(tab *DashboardTab, currentTest *TabTest, token string) {
 		if event.Key() == tcell.KeyEscape {
 			slackPanel.SetText("", false)
 			githubPanel.SetText("", false)
+			openaiPanel.SetText("", false)
 			app.SetFocus(brokenPanel)
 		}
 		if event.Key() == tcell.KeyLeft {
+			app.SetFocus(slackPanel)
+		}
+		if event.Key() == tcell.KeyRight {
 			app.SetFocus(slackPanel)
 		}
 		return event
