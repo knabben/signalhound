@@ -33,3 +33,7 @@ jobs:
         run: |
           go mod tidy
           make test-e2e
+
+      - name: Running Integration Test
+        run: |
+          make test
