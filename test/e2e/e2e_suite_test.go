@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"holdmybeer.io/testgrid/test/utils"
+	"github.com/knabben/stalker/test/utils"
 )
 
 var (
