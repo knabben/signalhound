@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- testgrid_v1alpha1_dashboard.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

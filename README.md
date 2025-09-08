@@ -1,44 +1,135 @@
-[![tests](https://github.com/knabben/stalker/actions/workflows/tests.yml/badge.svg)](https://github.com/knabben/stalker/actions/workflows/tests.yml)
+# stalker
+// TODO(user): Add simple overview of use/purpose
 
-## Kubernetes Signal Stalker
+## Description
+// TODO(user): An in-depth paragraph about your project and overview of use
 
-Stalk and Hunt for Flake tests on Testgrid Dashboards
+## Getting Started
 
-Summarizes failures and flakings in the Testgrid board for CI signal enumeration, currently 
-fetching `sig-release-master-blocking` and `sig-release-master-informing`
+### Prerequisites
+- go version v1.23.0+
+- docker version 17.03+.
+- kubectl version v1.11.3+.
+- Access to a Kubernetes v1.11.3+ cluster.
 
-Run the command as `stalker abstract`. A text user interface (TUI) will appear, displaying the combination
-of `Board#Tabs` in the first panel. Selecting one of these combinations will show a list of tests in the 
-`Tests` section. The two panels below provide the following information:
+### To Deploy on the cluster
+**Build and push your image to the location specified by `IMG`:**
 
-1. The left panel displays a summary from Slack via the `#release-ci-signal` channel, formatted in Markdown.
-2. The right panel shows a GitHub issue, also formatted in Markdown, with the default Kubernetes template pre-filled
+```sh
+make docker-build docker-push IMG=<some-registry>/stalker:tag
+```
 
-To copy for your clipboard the content of the windows pick one of the Windows and press `Ctrl-Space` 
-currently only working on WSL2.
+**NOTE:** This image ought to be published in the personal registry you specified.
+And it is required to have access to pull the image from the working environment.
+Make sure you have the proper permission to the registry if the above commands don’t work.
 
-![screen](https://github.com/user-attachments/assets/82b55880-dcf5-474c-bd3d-e0f67617a253)
+**Install the CRDs into the cluster:**
 
-## Features
+```sh
+make install
+```
 
-### AI Augmented Reality
+**Deploy the Manager to the cluster with the image specified by `IMG`:**
 
-Debugging and identifying the root cause of a problem can be challenging. 
-This tool can integrate with well-known LLM machinery APIs and provide automated insights into specific issues.
+```sh
+make deploy IMG=<some-registry>/stalker:tag
+```
 
-First set the environment variable `OPENAI_API_KEY` with a token generated in the portal, read the 
-[official documentation](https://platform.openai.com/docs/api-reference/authentication) to learn how generate a new
-token.
+> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
+privileges or be logged in as admin.
 
-On the bottom panel check the initial prompt and use `Ctrl-B` to call the OpenAI API with the panel text, `Ctrl-Space`
-will copy over the final content to your clipboard.
+**Create instances of your solution**
+You can apply the samples (examples) from the config/sample:
 
-![openai](https://github.com/user-attachments/assets/2f8b3418-1996-443b-810e-992f8ab9ac31)
+```sh
+kubectl apply -k config/samples/
+```
 
-### GitHub Issue Drafting
+>**NOTE**: Ensure that the samples has default values to test it out.
 
-It's possible to draft an issue automatically in the [CI Signal Board](https://github.com/orgs/kubernetes/projects/68/views/36).
+### To Uninstall
+**Delete the instances (CRs) from the cluster:**
 
-The Draft issue appears in the DRAFTING section down the first view after the user selecting the panel and pressing `CTRL-b`.
+```sh
+kubectl delete -k config/samples/
+```
 
-To enable the functionality set a Personal Access Token (PAT) with the proper permissions.
+**Delete the APIs(CRDs) from the cluster:**
+
+```sh
+make uninstall
+```
+
+**UnDeploy the controller from the cluster:**
+
+```sh
+make undeploy
+```
+
+## Project Distribution
+
+Following the options to release and provide this solution to the users.
+
+### By providing a bundle with all YAML files
+
+1. Build the installer for the image built and published in the registry:
+
+```sh
+make build-installer IMG=<some-registry>/stalker:tag
+```
+
+**NOTE:** The makefile target mentioned above generates an 'install.yaml'
+file in the dist directory. This file contains all the resources built
+with Kustomize, which are necessary to install this project without its
+dependencies.
+
+2. Using the installer
+
+Users can just run 'kubectl apply -f <URL for YAML BUNDLE>' to install
+the project, i.e.:
+
+```sh
+kubectl apply -f https://raw.githubusercontent.com/<org>/stalker/<tag or branch>/dist/install.yaml
+```
+
+### By providing a Helm Chart
+
+1. Build the chart using the optional helm plugin
+
+```sh
+kubebuilder edit --plugins=helm/v1-alpha
+```
+
+2. See that a chart was generated under 'dist/chart', and users
+can obtain this solution from there.
+
+**NOTE:** If you change the project, you need to update the Helm Chart
+using the same command above to sync the latest changes. Furthermore,
+if you create webhooks, you need to use the above command with
+the '--force' flag and manually ensure that any custom configuration
+previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml'
+is manually re-applied afterwards.
+
+## Contributing
+// TODO(user): Add detailed information on how you would like others to contribute to this project
+
+**NOTE:** Run `make help` for more information on all potential `make` targets
+
+More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+
+## License
+
+Copyright 2025.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
