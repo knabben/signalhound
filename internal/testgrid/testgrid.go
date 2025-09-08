@@ -34,13 +34,13 @@ func (t *TestGrid) FetchSummary(dashboard string) (summary []v1alpha1.DashboardS
 
 	var data []byte
 	if data, err = io.ReadAll(response.Body); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error parsing body response: %v", err)
 	}
 
 	// unmarshal summary data into a struct
 	var dashboardList DashboardMapper
 	if err = json.Unmarshal(data, &dashboardList); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshaling body response: %v", err)
 	}
 
 	// iterate and save the final value

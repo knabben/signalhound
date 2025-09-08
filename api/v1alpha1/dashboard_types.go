@@ -50,14 +50,9 @@ type TestGroup struct {
 	TestGroupName string `json:"test-group-name"`
 	Query         string `json:"query"`
 	Status        string `json:"status"`
-	//PhaseTimer    struct {
-	//	Phases []string  `json:"phases"`
-	//	Delta  []float64 `json:"delta"`
-	//	Total  float64   `json:"total"`
-	//} `json:"phase-timer"`
-	Cached  bool   `json:"cached"`
-	Summary string `json:"summary"`
-	Bugs    struct {
+	Cached        bool   `json:"cached"`
+	Summary       string `json:"summary"`
+	Bugs          struct {
 	} `json:"bugs"`
 	Changelists       []string   `json:"changelists"`
 	ColumnIds         []string   `json:"column_ids"`
@@ -68,9 +63,7 @@ type TestGroup struct {
 	Tests             []Test
 	RowIds            []string `json:"row_ids"`
 	Timestamps        []int64  `json:"timestamps"`
-	//Clusters          interface{} `json:"clusters"`
-	//TestIdMap interface{} `json:"test_id_map"`
-	IdMap struct {
+	IdMap             struct {
 	} `json:"idMap"`
 	TestMetadata struct {
 	} `json:"test-metadata"`
@@ -126,24 +119,19 @@ type TestGroup struct {
 		Options struct {
 		} `json:"options"`
 	} `json:"context-menu-template"`
-	//ColumnDiffLinkTemplates interface{} `json:"column-diff-link-templates"`
 	ResultsText   string `json:"results-text"`
 	LatestGreen   string `json:"latest-green"`
 	TriageEnabled bool   `json:"triage-enabled"`
-	//Notifications           interface{} `json:"notifications"`
-	OverallStatus int `json:"overall-status"`
+	OverallStatus int    `json:"overall-status"`
 }
 
 type Test struct {
-	Name         string `json:"name"`
-	OriginalName string `json:"original-name"`
-	//Alert        interface{}   `json:"alert"`
-	//LinkedBugs   []interface{} `json:"linked_bugs"`
-	Messages   []string   `json:"messages"`
-	ShortTexts []string   `json:"short_texts"`
-	Statuses   []Statuses `json:"statuses"`
-	Target     string     `json:"target"`
-	//UserProperty interface{}   `json:"user_property"`
+	Name         string     `json:"name"`
+	OriginalName string     `json:"original-name"`
+	Messages     []string   `json:"messages"`
+	ShortTexts   []string   `json:"short_texts"`
+	Statuses     []Statuses `json:"statuses"`
+	Target       string     `json:"target"`
 }
 
 type Statuses struct {

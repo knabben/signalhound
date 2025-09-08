@@ -33,15 +33,14 @@ import (
 var _ = Describe("Dashboard Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
-
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: "default",
 		}
+		tab := "sig-release-master-blocking"
 		dashboard := &testgridv1alpha1.Dashboard{}
-
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind Dashboard")
 			err := k8sClient.Get(ctx, typeNamespacedName, dashboard)
@@ -51,14 +50,15 @@ var _ = Describe("Dashboard Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: testgridv1alpha1.DashboardSpec{
+						DashboardTab: tab,
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
 			resource := &testgridv1alpha1.Dashboard{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
@@ -77,8 +77,6 @@ var _ = Describe("Dashboard Controller", func() {
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
 		})
 	})
 })
