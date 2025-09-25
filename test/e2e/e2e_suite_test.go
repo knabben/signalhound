@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/knabben/stalker/test/utils"
+	"github.com/knabben/signalhound/test/utils"
 )
 
 var (

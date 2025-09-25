@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/knabben/stalker/api/v1alpha1"
+	"github.com/knabben/signalhound/api/v1alpha1"
 )
 
 var URL = "https://testgrid.k8s.io"
@@ -23,7 +23,7 @@ func NewTestGrid(url string) *TestGrid {
 type DashboardMapper map[string]*v1alpha1.DashboardSummary
 
 // FetchSummary retrieves the summary data for a given dashboard from the TestGrid
-func (t *TestGrid) FetchSummary(dashboard string) (summary []v1alpha1.DashboardSummary, err error) {
+func (t *TestGrid) FetchSummary(dashboard string, filterStatus []string) (summary []v1alpha1.DashboardSummary, err error) {
 	url := fmt.Sprintf("%s/%s/summary", t.URL, cleanHTMLCharacters(dashboard))
 
 	// request summary data from TestGrid
@@ -43,12 +43,23 @@ func (t *TestGrid) FetchSummary(dashboard string) (summary []v1alpha1.DashboardS
 		return nil, fmt.Errorf("error unmarshaling body response: %v", err)
 	}
 
-	// iterate and save the final value
+	// iterate and save the final value filtering by status
 	for dashName, dashboardSummary := range dashboardList {
-		dashboardSummary.DashboardName = dashName
-		summary = append(summary, *dashboardSummary)
+		if hasStatus(dashboardSummary.OverallStatus, filterStatus) {
+			dashboardSummary.DashboardName = dashName
+			summary = append(summary, *dashboardSummary)
+		}
 	}
 	return summary, nil
+}
+
+func hasStatus(boardStatus string, statuses []string) bool {
+	for _, status := range statuses {
+		if boardStatus == status {
+			return true
+		}
+	}
+	return false
 }
 
 func cleanHTMLCharacters(str string) string {

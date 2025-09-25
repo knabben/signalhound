@@ -21,8 +21,8 @@ import (
 	"reflect"
 	"time"
 
-	testgridv1alpha1 "github.com/knabben/stalker/api/v1alpha1"
-	"github.com/knabben/stalker/internal/testgrid"
+	testgridv1alpha1 "github.com/knabben/signalhound/api/v1alpha1"
+	"github.com/knabben/signalhound/internal/testgrid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -53,12 +53,13 @@ func (r *DashboardReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	log.Info("got dashboard object", "tab", dashboard.Spec.DashboardTab)
 
 	grid := testgrid.NewTestGrid(testgrid.URL)
-	summary, err := grid.FetchSummary(dashboard.Spec.DashboardTab)
+	failingStatus := []string{testgridv1alpha1.FAILING_STATUS, testgridv1alpha1.FLAKY_STATUS}
+	summary, err := grid.FetchSummary(dashboard.Spec.DashboardTab, failingStatus)
 	if err != nil {
 		log.Error(err, "error fetching summary from endpoint.")
 		return ctrl.Result{}, err
 	}
-
+	log.Info("got summary", "summary", summary)
 	if r.shouldRefresh(dashboard.Status, summary) {
 		// set the dashboard summary on status if an update happened
 		dashboard.Status.DashboardSummary = summary

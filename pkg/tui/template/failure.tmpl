@@ -1,0 +1,33 @@
+### Which jobs are failing?
+
+* {{.BoardName}}
+* {{.TabName}}
+
+### Which tests are failing?
+
+* [{{.TestName}}]({{.ProwURL}})
+
+### Since when has it been failing?
+
+* First failure: {{.FirstFailure}}
+* Latest failure: {{.LastFailure}}
+
+### Testgrid link
+
+* [{{.TestGridURL}}]({{.TestGridURL}})
+* [{{.TriageURL}}]({{.TriageURL}})
+
+### Reason for failure (if possible)
+
+```
+{{.ErrMessage}}
+```
+
+### Anything else we need to know?
+
+_No response_
+
+### Relevant SIG(s)
+
+/sig {{.Sig}}
+cc @kubernetes/release-team-release-signal
