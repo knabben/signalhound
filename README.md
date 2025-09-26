@@ -1,27 +1,57 @@
-# stalker
-// TODO(user): Add simple overview of use/purpose
+# SignalHunter
 
-## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+Hunts Flake And Failing Testgrid Jobs
 
-## Getting Started
+SignalHunter monitors TestGrid dashboards to identify and summarize test failures and flaking patterns in Kubernetes
+CI/CD pipelines. It provides actionable insights for CI signal enumeration, currently focusing on
+`sig-release-master-blocking` and `sig-release-master-informing` dashboards.
 
-### Prerequisites
-- go version v1.23.0+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
+## Features
+
+### 📊 Test Monitoring Dashboard
+
+Run SignalHunter with the `abstract` command to launch an interactive text user interface (TUI) that displays:
+
+* Board#Tabs combinations in the first panel for easy navigation
+* Test listings when selecting specific board combinations
+*  Dual information panels:
+** Left panel: Slack summary from #release-ci-signal channel (Markdown formatted)
+** Right panel: GitHub issue template with Kubernetes defaults (Markdown formatted)
+
+### 📋 Draft issues automatically in the CI Signal Board
+Access drafts in the DRAFTING section after selecting a panel and pressing Ctrl-B
+Configure with a Personal Access Token (PAT) with appropriate repository permissions
+
+* Clipboard Integration
+ 
+Press Ctrl-Space on any panel to copy content to clipboard
+Currently optimized for WSL2 environments
+
+## Installation and Build
+
+Prerequisites
+
+* Go 1.24 or later
+* Git
+* Github Token PAT
+* Kubernetes cluster (kind)
+
+### Running at runtime
+
+```bash
+git clone https://github.com/knabben/signalhunter.git
+cd signalhunter
+make run  # for abstract and standalone
+make run-controller # for running the controller outside the cluster
+```
 
 ### To Deploy on the cluster
+
 **Build and push your image to the location specified by `IMG`:**
 
 ```sh
 make docker-build docker-push IMG=<some-registry>/stalker:tag
 ```
-
-**NOTE:** This image ought to be published in the personal registry you specified.
-And it is required to have access to pull the image from the working environment.
-Make sure you have the proper permission to the registry if the above commands don’t work.
 
 **Install the CRDs into the cluster:**
 
@@ -35,19 +65,16 @@ make install
 make deploy IMG=<some-registry>/stalker:tag
 ```
 
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
-privileges or be logged in as admin.
-
 **Create instances of your solution**
+
 You can apply the samples (examples) from the config/sample:
 
 ```sh
 kubectl apply -k config/samples/
 ```
 
->**NOTE**: Ensure that the samples has default values to test it out.
-
 ### To Uninstall
+
 **Delete the instances (CRs) from the cluster:**
 
 ```sh
@@ -66,56 +93,11 @@ make uninstall
 make undeploy
 ```
 
-## Project Distribution
+## Support
 
-Following the options to release and provide this solution to the users.
-
-### By providing a bundle with all YAML files
-
-1. Build the installer for the image built and published in the registry:
-
-```sh
-make build-installer IMG=<some-registry>/stalker:tag
-```
-
-**NOTE:** The makefile target mentioned above generates an 'install.yaml'
-file in the dist directory. This file contains all the resources built
-with Kustomize, which are necessary to install this project without its
-dependencies.
-
-2. Using the installer
-
-Users can just run 'kubectl apply -f <URL for YAML BUNDLE>' to install
-the project, i.e.:
-
-```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/stalker/<tag or branch>/dist/install.yaml
-```
-
-### By providing a Helm Chart
-
-1. Build the chart using the optional helm plugin
-
-```sh
-kubebuilder edit --plugins=helm/v1-alpha
-```
-
-2. See that a chart was generated under 'dist/chart', and users
-can obtain this solution from there.
-
-**NOTE:** If you change the project, you need to update the Helm Chart
-using the same command above to sync the latest changes. Furthermore,
-if you create webhooks, you need to use the above command with
-the '--force' flag and manually ensure that any custom configuration
-previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml'
-is manually re-applied afterwards.
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-**NOTE:** Run `make help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+Create an issue on GitHub for bug reports and feature requests 
+* Join the #sig-release channel in Kubernetes Slack for community support
+* Check the documentation for detailed usage guides
 
 ## License
 
@@ -133,3 +115,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+--- 
+
+SignalHunter is a community project focused on improving Kubernetes CI reliability through better test signal
+monitoring.

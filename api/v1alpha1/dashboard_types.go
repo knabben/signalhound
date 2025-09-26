@@ -23,6 +23,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	PASSING_STATUS = "PASSING"
+	FAILING_STATUS = "FAILING"
+	FLAKY_STATUS   = "FLAKY"
+)
+
 // DashboardSpec defines the desired state of Dashboard.
 type DashboardSpec struct {
 	// Name is the dashboard name to be scrapped
@@ -44,6 +50,8 @@ type DashboardSummary struct {
 	OverallStatusIcon   string `json:"overall_status_icon,omitempty"`
 	Status              string `json:"status,omitempty"`
 	DashboardName       string `json:"dashboard_name,omitempty"`
+	TabName             string `json:"tab_name,omitempty"`
+	TabURL              string `json:"tab_url,omitempty"`
 }
 
 type TestGroup struct {
