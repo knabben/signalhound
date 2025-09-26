@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	//"github.com/knabben/signalhound/pkg/testgrid"
 	"os"
 
 	"github.com/spf13/cobra"

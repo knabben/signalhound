@@ -1,6 +1,6 @@
 module github.com/knabben/signalhound
 
-go 1.24
+go 1.25.1
 
 require (
 	github.com/gdamore/tcell/v2 v2.9.0
