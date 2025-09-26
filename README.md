@@ -31,7 +31,7 @@ Currently optimized for WSL2 environments
 
 Prerequisites
 
-* Go 1.23 or later
+* Go 1.24 or later
 * Git
 * Github Token PAT
 * Kubernetes cluster (kind)
