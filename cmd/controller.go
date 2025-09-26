@@ -40,8 +40,9 @@ var controllerCmd = &cobra.Command{
 }
 
 func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	rootCmd.AddCommand(controllerCmd)
 
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(testgridv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }

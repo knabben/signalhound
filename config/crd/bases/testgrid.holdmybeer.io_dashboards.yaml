@@ -70,6 +70,10 @@ spec:
                       type: string
                     status:
                       type: string
+                    tab_name:
+                      type: string
+                    tab_url:
+                      type: string
                   type: object
                 type: array
             type: object

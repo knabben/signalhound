@@ -50,8 +50,6 @@ func (r *DashboardReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	log.Info("got dashboard object", "tab", dashboard.Spec.DashboardTab)
-
 	grid := testgrid.NewTestGrid(testgrid.URL)
 	failingStatus := []string{testgridv1alpha1.FAILING_STATUS, testgridv1alpha1.FLAKY_STATUS}
 	summary, err := grid.FetchSummary(dashboard.Spec.DashboardTab, failingStatus)
@@ -59,7 +57,7 @@ func (r *DashboardReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		log.Error(err, "error fetching summary from endpoint.")
 		return ctrl.Result{}, err
 	}
-	log.Info("got summary", "summary", summary)
+
 	if r.shouldRefresh(dashboard.Status, summary) {
 		// set the dashboard summary on status if an update happened
 		dashboard.Status.DashboardSummary = summary

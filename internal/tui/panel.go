@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/knabben/signalhound/pkg/github"
-	"github.com/knabben/signalhound/pkg/testgrid"
+	"github.com/knabben/signalhound/api/v1alpha1"
+	"github.com/knabben/signalhound/internal/github"
 	"github.com/rivo/tview"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -139,7 +139,7 @@ func updateGitHubPanel(tab *DashboardTab, currentTest *TabTest, token string) {
 
 	// pick the correct template by failure status
 	templateFile, prefixTitle := "template/flake.tmpl", "Flaking Test"
-	if tab.State == testgrid.FAILING_STATUS {
+	if tab.State == v1alpha1.FAILING_STATUS {
 		templateFile, prefixTitle = "template/failure.tmpl", "Failing Test"
 	}
 	template, err := tab.renderTemplate(issue, templateFile)

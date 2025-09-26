@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/knabben/signalhound/pkg/testgrid"
-	"github.com/knabben/signalhound/pkg/tui"
+	"github.com/knabben/signalhound/api/v1alpha1"
+	"github.com/knabben/signalhound/internal/testgrid"
+	tui2 "github.com/knabben/signalhound/internal/tui"
 	"github.com/spf13/cobra"
 )
 
@@ -19,11 +20,10 @@ var abstractCmd = &cobra.Command{
 }
 
 var (
-	tg                   = testgrid.NewTestGrid("")
+	tg                   = testgrid.NewTestGrid(testgrid.URL)
 	minFailure, minFlake int
 	token                string
-	testBoards           = []string{"sig-release-master-blocking", "sig-release-master-informing"}
-	brokenStatus         = []string{testgrid.FAILING_STATUS, testgrid.FLAKY_STATUS}
+	brokenStatus         = []string{v1alpha1.FAILING_STATUS, v1alpha1.FLAKY_STATUS}
 )
 
 func init() {
@@ -36,17 +36,19 @@ func init() {
 
 // RunAbstract starts the main command to scrape TestGrid.
 func RunAbstract(cmd *cobra.Command, args []string) error {
-	var allTabs []*tui.DashboardTab
+	var allTabs []*tui2.DashboardTab
 	fmt.Println("Scrapping the testgrid dashboard, wait...")
-	for _, dashboard := range testBoards {
-		// render each board summary
-		summary, err := tg.FetchSummary(dashboard)
+
+	// render each board summary
+	for _, dashboard := range []string{"sig-release-master-blocking", "sig-release-master-informing"} {
+		summaries, err := tg.FetchSummary(dashboard, brokenStatus)
 		if err != nil {
 			return err
 		}
 		// renders the final board summary with tests
-		fromSummary := tui.RenderFromSummary(tg.(*testgrid.TestGrid), summary, brokenStatus, minFailure, minFlake)
+		fromSummary := tui2.RenderFromSummary(tg, summaries, minFailure, minFlake)
 		allTabs = append(allTabs, fromSummary...)
 	}
-	return tui.RenderVisual(allTabs, token)
+
+	return tui2.RenderVisual(allTabs, token)
 }

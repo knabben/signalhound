@@ -24,7 +24,7 @@ type DashboardMapper map[string]*v1alpha1.DashboardSummary
 
 // FetchSummary retrieves the summary data for a given dashboard from the TestGrid
 func (t *TestGrid) FetchSummary(dashboard string, filterStatus []string) (summary []v1alpha1.DashboardSummary, err error) {
-	url := fmt.Sprintf("%s/%s/summary", t.URL, cleanHTMLCharacters(dashboard))
+	url := fmt.Sprintf("%s/%s/summary", t.URL, CleanHTMLCharacters(dashboard))
 
 	// request summary data from TestGrid
 	var response *http.Response
@@ -44,13 +44,33 @@ func (t *TestGrid) FetchSummary(dashboard string, filterStatus []string) (summar
 	}
 
 	// iterate and save the final value filtering by status
-	for dashName, dashboardSummary := range dashboardList {
+	for tabName, dashboardSummary := range dashboardList {
 		if hasStatus(dashboardSummary.OverallStatus, filterStatus) {
-			dashboardSummary.DashboardName = dashName
+			dashboardSummary.TabName = tabName
+			dashboardSummary.TabURL = url
 			summary = append(summary, *dashboardSummary)
 		}
 	}
 	return summary, nil
+}
+
+func (t *TestGrid) FetchTable(dashboard, tab string) (*v1alpha1.TestGroup, error) {
+	var (
+		testGroup = &v1alpha1.TestGroup{}
+		data      []byte
+	)
+	url := fmt.Sprintf("%s/%s/table?tab=%s&exclude-non-failed-tests=&dashboard=%s", t.URL, dashboard, tab, dashboard)
+	response, err := http.Get(strings.ReplaceAll(url, " ", "%20"))
+	if err != nil {
+		return nil, err
+	}
+	if data, err = io.ReadAll(response.Body); err != nil {
+		return nil, err
+	}
+	if err = json.Unmarshal(data, testGroup); err != nil {
+		return nil, err
+	}
+	return testGroup, nil
 }
 
 func hasStatus(boardStatus string, statuses []string) bool {
@@ -62,6 +82,6 @@ func hasStatus(boardStatus string, statuses []string) bool {
 	return false
 }
 
-func cleanHTMLCharacters(str string) string {
+func CleanHTMLCharacters(str string) string {
 	return strings.ReplaceAll(str, " ", "%20")
 }

@@ -3,10 +3,11 @@ package prow
 import (
 	"bytes"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"net/url"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_ExtractJunitIFrame(t *testing.T) {

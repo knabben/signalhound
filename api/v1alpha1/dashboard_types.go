@@ -50,6 +50,8 @@ type DashboardSummary struct {
 	OverallStatusIcon   string `json:"overall_status_icon,omitempty"`
 	Status              string `json:"status,omitempty"`
 	DashboardName       string `json:"dashboard_name,omitempty"`
+	TabName             string `json:"tab_name,omitempty"`
+	TabURL              string `json:"tab_url,omitempty"`
 }
 
 type TestGroup struct {

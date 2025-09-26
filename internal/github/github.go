@@ -3,10 +3,11 @@ package github
 import (
 	"context"
 	"errors"
+	"strings"
+
 	g3 "github.com/google/go-github/v65/github"
 	g4 "github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
-	"strings"
 )
 
 // projectID is the Kubernetes CI Signal board - CI Signal (SIG Release / Release Team)
