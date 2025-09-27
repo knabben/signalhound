@@ -22,7 +22,7 @@ type IssueTemplate struct {
 	Sig          string
 }
 
-func (d *DashboardTab) renderTemplate(issue *IssueTemplate, templateFile string) (output bytes.Buffer, err error) {
+func renderTemplate(issue *IssueTemplate, templateFile string) (output bytes.Buffer, err error) {
 	var tmpl *template.Template
 	tmpl, err = template.ParseFS(tmplFolder, templateFile)
 	if err != nil {

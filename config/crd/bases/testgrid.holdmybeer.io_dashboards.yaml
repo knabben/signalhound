@@ -57,18 +57,69 @@ spec:
                 type: integer
             type: object
           status:
-            description: DashboardStatus defines the observed state of Dashboard.
+            description: DashboardStatus defines the observed state of a testgrid
+              Dashboard.
             properties:
               lastFetched:
+                description: LastUpdate is the last fetched timestamp from testgrid.
                 format: date-time
                 type: string
               summary:
+                description: DashboardSummary represents the list of Tabs summarized
+                  from a dashboard set in the spec.DashboardTab
                 items:
+                  description: DashboardSummary represents summary information from
+                    a TestGrid dashboard
                   properties:
-                    alert:
-                      type: string
                     dashboard_name:
                       type: string
+                    dashboard_tab:
+                      description: DashboardTab represents test results for a specific
+                        dashboard tab
+                      properties:
+                        board_hash:
+                          type: string
+                        icon:
+                          type: string
+                        state:
+                          type: string
+                        tab_name:
+                          type: string
+                        tab_tests:
+                          items:
+                            description: TestResult contains details about an individual
+                              test run
+                            properties:
+                              error_message:
+                                type: string
+                              first_timestamp:
+                                format: int64
+                                type: integer
+                              latest_timestamp:
+                                format: int64
+                                type: integer
+                              prow_url:
+                                type: string
+                              test_name:
+                                type: string
+                              triage_url:
+                                type: string
+                            required:
+                            - error_message
+                            - first_timestamp
+                            - latest_timestamp
+                            - prow_url
+                            - test_name
+                            - triage_url
+                            type: object
+                          type: array
+                        tab_url:
+                          type: string
+                      required:
+                      - board_hash
+                      - icon
+                      - state
+                      type: object
                     last_run_timestamp:
                       format: int64
                       type: integer
@@ -79,13 +130,9 @@ spec:
                       type: string
                     overall_status:
                       type: string
-                    overall_status_icon:
-                      type: string
                     status:
                       type: string
-                    tab_name:
-                      type: string
-                    tab_url:
+                    url:
                       type: string
                   type: object
                 type: array

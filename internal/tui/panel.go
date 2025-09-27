@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	pagesName   = "Stalker"
+	pagesName   = "SignalHound"
 	app         *tview.Application // The tview application.
 	pages       *tview.Pages       // The application pages.
 	brokenPanel = tview.NewList()
@@ -27,7 +27,7 @@ var (
 
 // RenderVisual loads the entire grid and componnents in the app.
 // this is a blocking functions.
-func RenderVisual(tabs []*DashboardTab, githubToken string) error {
+func RenderVisual(tabs []*v1alpha1.DashboardTab, githubToken string) error {
 	app = tview.NewApplication()
 
 	// Render tab in the first row
@@ -62,10 +62,14 @@ func RenderVisual(tabs []*DashboardTab, githubToken string) error {
 
 	// Tabs iteration for building the middle panels and actions settings
 	for _, tab := range tabs {
-		tabsPanel.AddItem(fmt.Sprintf("[%s] %s", tab.Icon, tab.BoardHash), "", 0, func() {
+		icon := "🟣"
+		if tab.TabState == v1alpha1.FAILING_STATUS {
+			icon = "🔴"
+		}
+		tabsPanel.AddItem(fmt.Sprintf("[%s] %s", icon, strings.ReplaceAll(tab.BoardHash, "#", " - ")), "", 0, func() {
 			brokenPanel.Clear()
-			for _, test := range tab.Tests {
-				brokenPanel.AddItem(test.Name, "", 0, nil)
+			for _, test := range tab.TestRuns {
+				brokenPanel.AddItem(test.TestName, "", 0, nil)
 			}
 			app.SetFocus(brokenPanel)
 			brokenPanel.SetCurrentItem(0)
@@ -76,9 +80,9 @@ func RenderVisual(tabs []*DashboardTab, githubToken string) error {
 			})
 			// Broken panel rendering the function selection
 			brokenPanel.SetSelectedFunc(func(i int, testName string, t string, s rune) {
-				var currentTest = tab.Tests[i]
-				updateSlackPanel(tab, currentTest)
-				updateGitHubPanel(tab, currentTest, githubToken)
+				var currentTest = tab.TestRuns[i]
+				updateSlackPanel(tab, &currentTest)
+				updateGitHubPanel(tab, &currentTest, githubToken)
 				app.SetFocus(slackPanel)
 			})
 		})
@@ -90,11 +94,11 @@ func RenderVisual(tabs []*DashboardTab, githubToken string) error {
 }
 
 // updateSlackPanel writes down to left panel (Slack) content.
-func updateSlackPanel(tab *DashboardTab, currentTest *TabTest) {
+func updateSlackPanel(tab *v1alpha1.DashboardTab, currentTest *v1alpha1.TestResult) {
 	// set the item string with current test content
 	item := fmt.Sprintf("%s %s on [%s](%s): `%s` [Prow](%s), [Triage](%s), last failure on %s\n",
-		tab.Icon, cases.Title(language.English).String(tab.State), tab.BoardHash, tab.BoardURL,
-		currentTest.Name, currentTest.ProwURL, currentTest.TriageURL, timeClean(currentTest.LatestTimestamp),
+		tab.StateIcon, cases.Title(language.English).String(tab.TabState), tab.BoardHash, tab.TabURL,
+		currentTest.TestName, currentTest.ProwJobURL, currentTest.TriageURL, timeClean(currentTest.LatestTimestamp),
 	)
 
 	// set input capture, ctrl-space for clipboard copy, esc to cancel panel selection.
@@ -122,33 +126,33 @@ func updateSlackPanel(tab *DashboardTab, currentTest *TabTest) {
 }
 
 // updateGitHubPanel writes down to the right panel (GitHub) content.
-func updateGitHubPanel(tab *DashboardTab, currentTest *TabTest, token string) {
+func updateGitHubPanel(tab *v1alpha1.DashboardTab, currentTest *v1alpha1.TestResult, token string) {
 	// create the filled out issue template object
 	splitBoard := strings.Split(tab.BoardHash, "#")
 	issue := &IssueTemplate{
 		BoardName:    splitBoard[0],
 		TabName:      splitBoard[1],
-		TestName:     currentTest.Name,
-		TestGridURL:  tab.BoardURL,
+		TestName:     currentTest.TestName,
+		TestGridURL:  tab.TabURL,
 		TriageURL:    currentTest.TriageURL,
-		ProwURL:      currentTest.ProwURL,
-		ErrMessage:   currentTest.ErrMessage,
+		ProwURL:      currentTest.ProwJobURL,
+		ErrMessage:   currentTest.ErrorMessage,
 		FirstFailure: timeClean(currentTest.FirstTimestamp),
 		LastFailure:  timeClean(currentTest.LatestTimestamp),
 	}
 
 	// pick the correct template by failure status
 	templateFile, prefixTitle := "template/flake.tmpl", "Flaking Test"
-	if tab.State == v1alpha1.FAILING_STATUS {
+	if tab.TabState == v1alpha1.FAILING_STATUS {
 		templateFile, prefixTitle = "template/failure.tmpl", "Failing Test"
 	}
-	template, err := tab.renderTemplate(issue, templateFile)
+	template, err := renderTemplate(issue, templateFile)
 	if err != nil {
 		position.SetText(fmt.Sprintf("[red]error: %v", err.Error()))
 		return
 	}
 	issueTemplate := template.String()
-	issueTitle := fmt.Sprintf("[%v] %v", prefixTitle, currentTest.Name)
+	issueTitle := fmt.Sprintf("[%v] %v", prefixTitle, currentTest.TestName)
 	githubPanel.SetText(issueTemplate, false)
 
 	// set input capture, ctrl-space for clipboard copy, ctrl-b for

@@ -8,7 +8,7 @@ import (
 
 	"github.com/knabben/signalhound/api/v1alpha1"
 	"github.com/knabben/signalhound/internal/testgrid"
-	tui2 "github.com/knabben/signalhound/internal/tui"
+	"github.com/knabben/signalhound/internal/tui"
 	"github.com/spf13/cobra"
 )
 
@@ -35,19 +35,23 @@ func init() {
 
 // RunAbstract starts the main command to scrape TestGrid.
 func RunAbstract(cmd *cobra.Command, args []string) error {
-	var allTabs []*tui2.DashboardTab
 	fmt.Println("Scrapping the testgrid dashboard, wait...")
-
-	// render each board summary
+	var dashboardTabs []*v1alpha1.DashboardTab
 	for _, dashboard := range []string{"sig-release-master-blocking", "sig-release-master-informing"} {
-		summaries, err := tg.FetchSummary(dashboard, v1alpha1.ERROR_STATUSES)
+		dashSummaries, err := tg.FetchTabSummary(dashboard, v1alpha1.ERROR_STATUSES)
 		if err != nil {
 			return err
 		}
-		// renders the final board summary with tests
-		fromSummary := tui2.RenderFromSummary(tg, summaries, minFailure, minFlake)
-		allTabs = append(allTabs, fromSummary...)
+		for _, dashSummary := range dashSummaries {
+			dashTab, err := tg.FetchTabTests(&dashSummary, minFailure, minFlake)
+			if err != nil {
+				fmt.Println(fmt.Errorf("error fetching table : %s", err))
+				continue
+			}
+			if len(dashTab.TestRuns) > 0 {
+				dashboardTabs = append(dashboardTabs, dashTab)
+			}
+		}
 	}
-
-	return tui2.RenderVisual(allTabs, token)
+	return tui.RenderVisual(dashboardTabs, token)
 }

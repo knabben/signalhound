@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"time"
@@ -56,71 +58,83 @@ func (r *DashboardReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	grid := testgrid.NewTestGrid(testgrid.URL)
-	summary, err := grid.FetchSummary(dashboard.Spec.DashboardTab, testgridv1alpha1.ERROR_STATUSES)
+	dashboardSummaries, err := grid.FetchTabSummary(dashboard.Spec.DashboardTab, testgridv1alpha1.ERROR_STATUSES)
 	if err != nil {
 		r.log.Error(err, "error fetching summary from endpoint.")
 		return ctrl.Result{}, err
 	}
 
-	if r.shouldRefresh(dashboard.Status, summary) {
-		// set the dashboard summary on status if an update happened
-		dashboard.Status.DashboardSummary = summary
+	// set the dashboard summary on status if an update happened
+	if r.shouldRefresh(dashboard.Status, dashboardSummaries) {
+		dashboard.Status.DashboardSummary = dashboardSummaries
 		dashboard.Status.LastUpdate = metav1.Now()
+
 		r.log.Info("updating dashboard object status.")
 		if err := r.Status().Update(ctx, &dashboard); err != nil {
 			r.log.Error(err, "unable to update dashboard status")
 			return ctrl.Result{}, err
 		}
 
-		err = r.createOrUpdateConfigmaps(ctx, req, grid, dashboard)
-		if err != nil {
-			r.log.Error(err, "unable to create update a configmap")
-			return ctrl.Result{}, err
+		// create or update the tab summary board if necessary
+		for _, dashSummary := range dashboardSummaries {
+			tabName := dashSummary.DashboardTab.TabName
+			configMapKey := client.ObjectKey{
+				Namespace: req.Namespace,
+				Name:      fmt.Sprintf("%s-%s", dashSummary.DashboardName, tabName),
+			}
+
+			var tab *testgridv1alpha1.DashboardTab
+			if tab, err = grid.FetchTabTests(&dashSummary, dashboard.Spec.MinFlakes, dashboard.Spec.MinFailures); err != nil {
+				r.log.Error(err, "error fetching table", "tab", tabName)
+				continue
+			}
+
+			configMap, err := buildTestConfigMap(configMapKey, tab)
+			if err != nil {
+				r.log.Error(err, "failed to build ConfigMap", "name", configMapKey.Name)
+				continue
+			}
+			if err = r.createOrUpdateConfigmap(ctx, configMapKey, configMap); err != nil {
+				r.log.Error(err, "unable to create update a configmap")
+				continue
+			}
 		}
 	}
 
 	return ctrl.Result{}, nil
 }
 
-// createOrUpdateConfigmaps
-func (r *DashboardReconciler) createOrUpdateConfigmaps(
+// createOrUpdateConfigmap creates or updates ConfigMaps for each dashboard tab
+// containing the test data retrieved from TestGrid.
+func (r *DashboardReconciler) createOrUpdateConfigmap(
 	ctx context.Context,
-	req ctrl.Request,
-	grid *testgrid.TestGrid,
-	dashboard testgridv1alpha1.Dashboard,
+	configMapKey client.ObjectKey,
+	configMap *v1.ConfigMap,
 ) (err error) {
-	for _, summary := range dashboard.Status.DashboardSummary {
-		var configmap = &v1.ConfigMap{}
-
-		table, err := grid.FetchTable(summary, dashboard.Spec.MinFlakes, dashboard.Spec.MinFailures)
-		if err != nil {
-			r.log.Error(err, "error fetching table", "tab", summary.TabName)
-			continue
+	if !r.doesExistsConfigmap(ctx, configMapKey) {
+		if err := r.Create(ctx, configMap); err != nil {
+			return fmt.Errorf("failed to create ConfigMap %s: %w", configMapKey.Name, err)
 		}
+		r.log.Info("created ConfigMap", "configmap", configMapKey.Name)
 
-		configmapName := fmt.Sprintf("%s-%s", summary.DashboardName, summary.TabName)
-		configMapKey := client.ObjectKey{Namespace: req.Namespace, Name: configmapName}
-
-		if err := r.Get(ctx, configMapKey, configmap); err != nil {
-			if apierrors.IsNotFound(err) {
-				configmap = &v1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      configmapName,
-						Namespace: req.Namespace,
-					},
-					Data: map[string]string{
-						"description": table.Description,
-					},
-				}
-				// create the configmap
-				if err := r.Create(ctx, configmap); err != nil {
-					return err
-				}
-				r.log.Info("created configmap", "configmap", configmapName)
-			}
+	} else {
+		if err = r.Update(ctx, configMap); err != nil {
+			return fmt.Errorf("failed to update ConfigMap %s: %w", configMapKey.Name, err)
 		}
+		r.log.V(1).Info("updated ConfigMap", "configmap", configMapKey.Name)
+
 	}
 	return nil
+}
+
+func (r *DashboardReconciler) doesExistsConfigmap(ctx context.Context, key client.ObjectKey) bool {
+	var cm = &v1.ConfigMap{}
+	if err := r.Get(ctx, key, cm); err != nil {
+		if apierrors.IsNotFound(err) {
+			return true
+		}
+	}
+	return false
 }
 
 // shouldRefresh determines if it's time to refresh the dashboard data
@@ -128,13 +142,27 @@ func (r *DashboardReconciler) shouldRefresh(dashboardStatus testgridv1alpha1.Das
 	if reflect.DeepEqual(dashboardStatus.DashboardSummary, summary) {
 		return false
 	}
-
 	if dashboardStatus.LastUpdate.IsZero() {
 		return true
 	}
-
 	refreshInterval := time.Duration(1) * time.Minute // should at least wait for 1 minute
 	return time.Since(dashboardStatus.LastUpdate.Time) >= refreshInterval
+}
+
+func buildTestConfigMap(key client.ObjectKey, tab *testgridv1alpha1.DashboardTab) (*v1.ConfigMap, error) {
+	data, err := json.Marshal(tab)
+	if err != nil {
+		return nil, err
+	}
+	return &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      key.Name,
+			Namespace: key.Namespace,
+		},
+		Data: map[string]string{
+			"data": base64.StdEncoding.EncodeToString(data),
+		},
+	}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
