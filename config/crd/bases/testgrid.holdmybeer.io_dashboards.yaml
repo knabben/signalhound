@@ -40,8 +40,21 @@ spec:
             description: DashboardSpec defines the desired state of Dashboard.
             properties:
               dashboardTab:
-                description: Name is the dashboard name to be scrapped
+                description: DashboardTab is the name of the tab be scrapped from
+                  this board
                 type: string
+              minFailures:
+                default: 2
+                description: MinFailures is the minimum number of failures to consider
+                  a test group as failing
+                minimum: 0
+                type: integer
+              minFlakes:
+                default: 3
+                description: MinFlake is the minimum number of flakes to consider
+                  a test group as flaky
+                minimum: 0
+                type: integer
             type: object
           status:
             description: DashboardStatus defines the observed state of Dashboard.

@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,10 +30,22 @@ const (
 	FLAKY_STATUS   = "FLAKY"
 )
 
+var ERROR_STATUSES = []string{FAILING_STATUS, FLAKY_STATUS}
+
 // DashboardSpec defines the desired state of Dashboard.
 type DashboardSpec struct {
-	// Name is the dashboard name to be scrapped
+	// DashboardTab is the name of the tab be scrapped from this board
 	DashboardTab string `json:"dashboardTab,omitempty"`
+
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=2
+	// MinFailures is the minimum number of failures to consider a test group as failing
+	MinFailures int `json:"minFailures,omitempty"`
+
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=3
+	// MinFlake is the minimum number of flakes to consider a test group as flaky
+	MinFlakes int `json:"minFlakes,omitempty"`
 }
 
 // DashboardStatus defines the observed state of Dashboard.
@@ -55,82 +68,21 @@ type DashboardSummary struct {
 }
 
 type TestGroup struct {
-	TestGroupName string `json:"test-group-name"`
-	Query         string `json:"query"`
-	Status        string `json:"status"`
-	Cached        bool   `json:"cached"`
-	Summary       string `json:"summary"`
-	Bugs          struct {
-	} `json:"bugs"`
-	Changelists       []string   `json:"changelists"`
-	ColumnIds         []string   `json:"column_ids"`
-	CustomColumns     [][]string `json:"custom-columns"`
-	ColumnHeaderNames []string   `json:"column-header-names"`
-	Groups            []string   `json:"groups"`
-	Metrics           []string   `json:"metrics"`
-	Tests             []Test
-	RowIds            []string `json:"row_ids"`
-	Timestamps        []int64  `json:"timestamps"`
-	IdMap             struct {
-	} `json:"idMap"`
-	TestMetadata struct {
-	} `json:"test-metadata"`
-	StaleTestThreshold    int    `json:"stale-test-threshold"`
-	NumStaleTests         int    `json:"num-stale-tests"`
-	AddTabularNamesOption bool   `json:"add-tabular-names-option"`
-	ShowTabularNames      bool   `json:"show-tabular-names"`
-	Description           string `json:"description"`
-	BugComponent          int    `json:"bug-component"`
-	CodeSearchPath        string `json:"code-search-path"`
-	OpenTestTemplate      struct {
-		Url     string `json:"url"`
-		Name    string `json:"name"`
-		Options struct {
-		} `json:"options"`
-	} `json:"open-test-template"`
-	FileBugTemplate struct {
-		Url     string `json:"url"`
-		Name    string `json:"name"`
-		Options struct {
-			Body  string `json:"body"`
-			Title string `json:"title"`
-		} `json:"options"`
-	} `json:"file-bug-template"`
-	AttachBugTemplate struct {
-		Url     string `json:"url"`
-		Name    string `json:"name"`
-		Options struct {
-		} `json:"options"`
-	} `json:"attach-bug-template"`
-	ResultsUrlTemplate struct {
-		Url     string `json:"url"`
-		Name    string `json:"name"`
-		Options struct {
-		} `json:"options"`
-	} `json:"results-url-template"`
-	CodeSearchUrlTemplate struct {
-		Url     string `json:"url"`
-		Name    string `json:"name"`
-		Options struct {
-		} `json:"options"`
-	} `json:"code-search-url-template"`
-	AboutDashboardUrl string `json:"about-dashboard-url"`
-	OpenBugTemplate   struct {
-		Url     string `json:"url"`
-		Name    string `json:"name"`
-		Options struct {
-		} `json:"options"`
-	} `json:"open-bug-template"`
-	ContextMenuTemplate struct {
-		Url     string `json:"url"`
-		Name    string `json:"name"`
-		Options struct {
-		} `json:"options"`
-	} `json:"context-menu-template"`
-	ResultsText   string `json:"results-text"`
-	LatestGreen   string `json:"latest-green"`
-	TriageEnabled bool   `json:"triage-enabled"`
-	OverallStatus int    `json:"overall-status"`
+	TestGroupName      string     `json:"test-group-name"`
+	Query              string     `json:"query"`
+	Status             string     `json:"status"`
+	Changelists        []string   `json:"changelists"`
+	ColumnIds          []string   `json:"column_ids"`
+	CustomColumns      [][]string `json:"custom-columns"`
+	ColumnHeaderNames  []string   `json:"column-header-names"`
+	Groups             []string   `json:"groups"`
+	Tests              []Test
+	RowIds             []string `json:"row_ids"`
+	Timestamps         []int64  `json:"timestamps"`
+	StaleTestThreshold int      `json:"stale-test-threshold"`
+	NumStaleTests      int      `json:"num-stale-tests"`
+	Description        string   `json:"description"`
+	OverallStatus      int      `json:"overall-status"`
 }
 
 type Test struct {
@@ -147,19 +99,33 @@ type Statuses struct {
 	Value int `json:"value"`
 }
 
+// RenderStatuses renders the statuses of a test into a string.
 func (te *Test) RenderStatuses(timestamps []int64) (string, int, int) {
-	var firstFailure, text, failures = -1, "", 0
-	for i, s := range te.ShortTexts {
-		if s != "" {
-			if firstFailure < 0 {
-				firstFailure = i
-			}
-			tm := time.Unix(timestamps[i]/1000, 0)
-			text += fmt.Sprintf("\t%s %s %s\n", s, tm, te.Messages[i])
-			failures += 1
+	var firstFailureIndex = -1
+	var failureCount = 0
+	var output strings.Builder
+
+	for i, shortText := range te.ShortTexts {
+		if shortText == "" {
+			continue
 		}
+
+		if firstFailureIndex < 0 {
+			firstFailureIndex = i
+		}
+
+		formattedStatus := formatTestStatus(shortText, timestamps[i], te.Messages[i])
+		output.WriteString(formattedStatus)
+		failureCount++
 	}
-	return text, failures, firstFailure
+
+	return output.String(), failureCount, firstFailureIndex
+}
+
+// formatTestStatus creates a formatted string for a single test status.
+func formatTestStatus(shortText string, timestamp int64, message string) string {
+	timeFormatted := time.Unix(timestamp/1000, 0)
+	return fmt.Sprintf("\t%s %s %s\n", shortText, timeFormatted, message)
 }
 
 // +kubebuilder:object:root=true

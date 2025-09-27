@@ -37,13 +37,13 @@ type TabTest struct {
 }
 
 func RenderFromSummary(tg *testgrid.TestGrid, summaries []v1alpha1.DashboardSummary, minFailure, minFlake int) (dashboardTabs []*DashboardTab) {
-	for _, dashboard := range summaries {
-		table, err := tg.FetchTable(dashboard.DashboardName, dashboard.TabName)
+	for _, summary := range summaries {
+		table, err := tg.FetchTable(summary, minFailure, minFlake)
 		if err != nil {
 			fmt.Println(fmt.Errorf("error fetching table : %s", err))
 			continue
 		}
-		dashboardTab := NewDashboardTab(dashboard.TabURL, dashboard.TabName, &dashboard, table, minFailure, minFlake)
+		dashboardTab := NewDashboardTab(&summary, table)
 		if len(dashboardTab.Tests) > 0 {
 			dashboardTabs = append(dashboardTabs, dashboardTab)
 		}
@@ -51,38 +51,40 @@ func RenderFromSummary(tg *testgrid.TestGrid, summaries []v1alpha1.DashboardSumm
 	return
 }
 
-func NewDashboardTab(URL string, tab string, dashboard *v1alpha1.DashboardSummary, table *v1alpha1.TestGroup, minFailure, minFlake int) *DashboardTab {
-	dash := DashboardTab{URL: URL, Tab: tab, Dashboard: dashboard}
-	aggregation := fmt.Sprintf("%s#%s", dashboard.DashboardName, tab)
-	dash.BoardURL = testgrid.CleanHTMLCharacters(fmt.Sprintf("https://testgrid.k8s.io/%s&exclude-non-failed-tests=", aggregation))
-	dash.BoardHash = aggregation
-	dash.State = dashboard.OverallStatus
-	dash.Icon = ":large_purple_square:"
-	if dash.State == v1alpha1.FAILING_STATUS {
-		dash.Icon = ":large_red_square:"
+func NewDashboardTab(dashboard *v1alpha1.DashboardSummary, table *v1alpha1.TestGroup) *DashboardTab {
+	aggregation := fmt.Sprintf("%s#%s", dashboard.DashboardName, dashboard.TabName)
+	icon := ":large_purple_square:"
+	if dashboard.OverallStatus == v1alpha1.FAILING_STATUS {
+		icon = ":large_red_square:"
 	}
-	dash.Tests = renderTable(table, dash.State, minFailure, minFlake)
-	return &dash
+	return &DashboardTab{
+		URL:       dashboard.TabURL,
+		Tab:       dashboard.TabName,
+		Dashboard: dashboard,
+		BoardURL:  testgrid.CleanHTMLCharacters(fmt.Sprintf("https://testgrid.k8s.io/%s&exclude-non-failed-tests=", aggregation)),
+		BoardHash: aggregation,
+		State:     dashboard.OverallStatus,
+		Tests:     renderTable(table),
+		Icon:      icon,
+	}
 }
 
-func renderTable(table *v1alpha1.TestGroup, state string, minFailure, minFlake int) (tests []*TabTest) {
+func renderTable(table *v1alpha1.TestGroup) (tests []*TabTest) {
 	for _, test := range table.Tests {
 		testName := test.Name
 		if strings.Contains(test.Name, e2eSuitePrefix) {
 			testName = prow.GetRegexParameter(testRegex, testName)["TEST"]
 		}
-		errMessage, failures, firstFailure := test.RenderStatuses(table.Timestamps)
-		if (failures >= minFailure && state == v1alpha1.FAILING_STATUS) || (failures >= minFlake && state == v1alpha1.FLAKY_STATUS) {
-			tabTest := TabTest{
-				Name:            testName,
-				LatestTimestamp: table.Timestamps[0],
-				FirstTimestamp:  table.Timestamps[len(table.Timestamps)-1],
-				ProwURL:         testgrid.CleanHTMLCharacters(fmt.Sprintf("https://prow.k8s.io/view/gs/%s/%s", table.Query, table.Changelists[firstFailure])),
-				TriageURL:       testgrid.CleanHTMLCharacters(fmt.Sprintf("https://storage.googleapis.com/k8s-triage/index.html?test=%s", testgrid.CleanHTMLCharacters(testName))),
-				ErrMessage:      errMessage,
-			}
-			tests = append(tests, &tabTest)
+		errMessage, _, firstFailure := test.RenderStatuses(table.Timestamps)
+		tabTest := TabTest{
+			Name:            testName,
+			LatestTimestamp: table.Timestamps[0],
+			FirstTimestamp:  table.Timestamps[len(table.Timestamps)-1],
+			ProwURL:         testgrid.CleanHTMLCharacters(fmt.Sprintf("https://prow.k8s.io/view/gs/%s/%s", table.Query, table.Changelists[firstFailure])),
+			TriageURL:       testgrid.CleanHTMLCharacters(fmt.Sprintf("https://storage.googleapis.com/k8s-triage/index.html?test=%s", testgrid.CleanHTMLCharacters(testName))),
+			ErrMessage:      errMessage,
 		}
+		tests = append(tests, &tabTest)
 	}
-	return
+	return tests
 }

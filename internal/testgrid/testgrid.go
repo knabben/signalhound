@@ -54,22 +54,33 @@ func (t *TestGrid) FetchSummary(dashboard string, filterStatus []string) (summar
 	return summary, nil
 }
 
-func (t *TestGrid) FetchTable(dashboard, tab string) (*v1alpha1.TestGroup, error) {
-	var (
-		testGroup = &v1alpha1.TestGroup{}
-		data      []byte
-	)
-	url := fmt.Sprintf("%s/%s/table?tab=%s&exclude-non-failed-tests=&dashboard=%s", t.URL, dashboard, tab, dashboard)
-	response, err := http.Get(strings.ReplaceAll(url, " ", "%20"))
+// FetchTable returns the test group related to the tab of a dashboard
+func (t *TestGrid) FetchTable(dashboard v1alpha1.DashboardSummary, minFailure, minFlake int) (*v1alpha1.TestGroup, error) {
+	url := fmt.Sprintf("%s/%s/table?tab=%s&exclude-non-failed-tests=&dashboard=%s",
+		t.URL, dashboard.DashboardName, dashboard.TabName, dashboard.DashboardName)
+	response, err := http.Get(CleanHTMLCharacters(url))
 	if err != nil {
 		return nil, err
 	}
+
+	var data []byte
 	if data, err = io.ReadAll(response.Body); err != nil {
 		return nil, err
 	}
+
+	var testGroup = &v1alpha1.TestGroup{}
 	if err = json.Unmarshal(data, testGroup); err != nil {
 		return nil, err
 	}
+
+	var filteredTests []v1alpha1.Test
+	for _, test := range testGroup.Tests {
+		_, failures, _ := test.RenderStatuses(testGroup.Timestamps)
+		if (failures >= minFailure && dashboard.OverallStatus == v1alpha1.FAILING_STATUS) || (failures >= minFlake && dashboard.OverallStatus == v1alpha1.FLAKY_STATUS) {
+			filteredTests = append(filteredTests, test)
+		}
+	}
+	testGroup.Tests = filteredTests
 	return testGroup, nil
 }
 

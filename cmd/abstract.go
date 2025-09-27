@@ -23,7 +23,6 @@ var (
 	tg                   = testgrid.NewTestGrid(testgrid.URL)
 	minFailure, minFlake int
 	token                string
-	brokenStatus         = []string{v1alpha1.FAILING_STATUS, v1alpha1.FLAKY_STATUS}
 )
 
 func init() {
@@ -41,7 +40,7 @@ func RunAbstract(cmd *cobra.Command, args []string) error {
 
 	// render each board summary
 	for _, dashboard := range []string{"sig-release-master-blocking", "sig-release-master-informing"} {
-		summaries, err := tg.FetchSummary(dashboard, brokenStatus)
+		summaries, err := tg.FetchSummary(dashboard, v1alpha1.ERROR_STATUSES)
 		if err != nil {
 			return err
 		}

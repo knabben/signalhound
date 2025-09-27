@@ -7,3 +7,5 @@ metadata:
   name: dashboard-sample
 spec:
   dashboardTab: sig-release-master-blocking
+  minFailures: 2
+  minFlakes: 2

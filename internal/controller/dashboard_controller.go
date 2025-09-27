@@ -18,11 +18,15 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
+	"github.com/go-logr/logr"
 	testgridv1alpha1 "github.com/knabben/signalhound/api/v1alpha1"
 	"github.com/knabben/signalhound/internal/testgrid"
+	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -34,6 +38,7 @@ import (
 type DashboardReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	log    logr.Logger
 }
 
 // +kubebuilder:rbac:groups=testgrid.holdmybeer.io,resources=dashboards,verbs=get;list;watch;create;update;patch;delete
@@ -42,19 +47,18 @@ type DashboardReconciler struct {
 
 // Reconcile loops against the dashboard reconciler and set the final object status.
 func (r *DashboardReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := logf.FromContext(ctx).WithValues("resource", req.NamespacedName)
+	r.log = logf.FromContext(ctx).WithValues("resource", req.NamespacedName)
 
 	var dashboard testgridv1alpha1.Dashboard
 	if err := r.Get(ctx, req.NamespacedName, &dashboard); err != nil {
-		log.Error(err, "unable to fetch dashboard")
+		r.log.Error(err, "unable to fetch dashboard")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	grid := testgrid.NewTestGrid(testgrid.URL)
-	failingStatus := []string{testgridv1alpha1.FAILING_STATUS, testgridv1alpha1.FLAKY_STATUS}
-	summary, err := grid.FetchSummary(dashboard.Spec.DashboardTab, failingStatus)
+	summary, err := grid.FetchSummary(dashboard.Spec.DashboardTab, testgridv1alpha1.ERROR_STATUSES)
 	if err != nil {
-		log.Error(err, "error fetching summary from endpoint.")
+		r.log.Error(err, "error fetching summary from endpoint.")
 		return ctrl.Result{}, err
 	}
 
@@ -62,15 +66,61 @@ func (r *DashboardReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// set the dashboard summary on status if an update happened
 		dashboard.Status.DashboardSummary = summary
 		dashboard.Status.LastUpdate = metav1.Now()
-
-		log.Info("updating dashboard object status.")
+		r.log.Info("updating dashboard object status.")
 		if err := r.Status().Update(ctx, &dashboard); err != nil {
-			log.Error(err, "unable to update dashboard status")
+			r.log.Error(err, "unable to update dashboard status")
+			return ctrl.Result{}, err
+		}
+
+		err = r.createOrUpdateConfigmaps(ctx, req, grid, dashboard)
+		if err != nil {
+			r.log.Error(err, "unable to create update a configmap")
 			return ctrl.Result{}, err
 		}
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// createOrUpdateConfigmaps
+func (r *DashboardReconciler) createOrUpdateConfigmaps(
+	ctx context.Context,
+	req ctrl.Request,
+	grid *testgrid.TestGrid,
+	dashboard testgridv1alpha1.Dashboard,
+) (err error) {
+	for _, summary := range dashboard.Status.DashboardSummary {
+		var configmap = &v1.ConfigMap{}
+
+		table, err := grid.FetchTable(summary, dashboard.Spec.MinFlakes, dashboard.Spec.MinFailures)
+		if err != nil {
+			r.log.Error(err, "error fetching table", "tab", summary.TabName)
+			continue
+		}
+
+		configmapName := fmt.Sprintf("%s-%s", summary.DashboardName, summary.TabName)
+		configMapKey := client.ObjectKey{Namespace: req.Namespace, Name: configmapName}
+
+		if err := r.Get(ctx, configMapKey, configmap); err != nil {
+			if apierrors.IsNotFound(err) {
+				configmap = &v1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      configmapName,
+						Namespace: req.Namespace,
+					},
+					Data: map[string]string{
+						"description": table.Description,
+					},
+				}
+				// create the configmap
+				if err := r.Create(ctx, configmap); err != nil {
+					return err
+				}
+				r.log.Info("created configmap", "configmap", configmapName)
+			}
+		}
+	}
+	return nil
 }
 
 // shouldRefresh determines if it's time to refresh the dashboard data
