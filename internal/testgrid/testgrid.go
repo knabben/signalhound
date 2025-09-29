@@ -165,7 +165,6 @@ func (t *TestGrid) FetchTabTests(summary *v1alpha1.DashboardSummary, minFailure,
 func filterTabTests(testGroup *TestGroup, state string, minFailure, minFlake int) (tests []v1alpha1.TestResult) {
 	for _, test := range testGroup.Tests {
 		errMessage, failures, firstFailure := test.RenderStatuses(testGroup.Timestamps)
-		fmt.Println(errMessage, failures, firstFailure)
 		if (failures >= minFailure && state == v1alpha1.FAILING_STATUS) ||
 			(failures >= minFlake && state == v1alpha1.FLAKY_STATUS) {
 			testName := test.Name

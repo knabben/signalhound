@@ -5,7 +5,7 @@
 domain: holdmybeer.io
 layout:
 - go.kubebuilder.io/v4
-projectName: stalker
+projectName: signalhoud
 repo: holdmybeer.io/testgrid
 resources:
 - api:

@@ -8,9 +8,9 @@ import (
 
 var (
 	rootCmd = &cobra.Command{
-		Use:   "stalker",
-		Short: "stalker search for issues and flaky tests on Kubernetes",
-		Long:  "stalker search for issues and flaky tests on Kubernetes",
+		Use:   "signalhound",
+		Short: "signalhound search for issues and flaky tests on Kubernetes",
+		Long:  "signalhound search for issues and flaky tests on Kubernetes",
 	}
 )
 

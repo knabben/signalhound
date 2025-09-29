@@ -1,4 +1,4 @@
-# This rule is not used by the project stalker itself.
+# This rule is not used by the project signalhound itself.
 # It is provided to allow the cluster admin to help manage permissions for users.
 #
 # Grants read-only access to testgrid.holdmybeer.io resources.
@@ -9,7 +9,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    app.kubernetes.io/name: stalker
+    app.kubernetes.io/name: signalhound
     app.kubernetes.io/managed-by: kustomize
   name: dashboard-viewer-role
 rules:

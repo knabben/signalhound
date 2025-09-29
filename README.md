@@ -50,7 +50,7 @@ make run-controller # for running the controller outside the cluster
 **Build and push your image to the location specified by `IMG`:**
 
 ```sh
-make docker-build docker-push IMG=<some-registry>/stalker:tag
+make docker-build docker-push IMG=<some-registry>/signalhound:tag
 ```
 
 **Install the CRDs into the cluster:**
@@ -62,7 +62,7 @@ make install
 **Deploy the Manager to the cluster with the image specified by `IMG`:**
 
 ```sh
-make deploy IMG=<some-registry>/stalker:tag
+make deploy IMG=<some-registry>/signalhound:tag
 ```
 
 **Create instances of your solution**

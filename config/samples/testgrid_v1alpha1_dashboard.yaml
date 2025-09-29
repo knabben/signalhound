@@ -2,7 +2,7 @@ apiVersion: testgrid.holdmybeer.io/v1alpha1
 kind: Dashboard
 metadata:
   labels:
-    app.kubernetes.io/name: stalker
+    app.kubernetes.io/name: signalhound
     app.kubernetes.io/managed-by: kustomize
   name: dashboard-sample
 spec:
