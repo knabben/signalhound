@@ -194,7 +194,7 @@ func updateGitHubPanel(tab *v1alpha1.DashboardTab, currentTest *v1alpha1.TestRes
 
 // timeClean returns the string representation of the timestamp.
 func timeClean(ts int64) string {
-	return time.Unix(ts/1000, 0).Format(time.RFC1123)
+	return time.Unix(ts/1000, 0).UTC().Format(time.RFC1123)
 }
 
 // CopyToClipboard pipes the panel content to clip.exe WSL.
