@@ -30,12 +30,15 @@ func init() {
 
 	abstractCmd.PersistentFlags().IntVarP(&minFailure, "min-failure", "f", 2, "minimum threshold for test failures")
 	abstractCmd.PersistentFlags().IntVarP(&minFlake, "min-flake", "m", 3, "minimum threshold for test flakeness")
-	token = os.Getenv("GITHUB_TOKEN")
+	token = os.Getenv("SIGNALHOUND_GITHUB_TOKEN")
+	if token == "" {
+		token = os.Getenv("GITHUB_TOKEN")
+	}
 }
 
 // RunAbstract starts the main command to scrape TestGrid.
 func RunAbstract(cmd *cobra.Command, args []string) error {
-	fmt.Println("Scrapping the testgrid dashboard, wait...")
+	fmt.Println("Scraping the testgrid dashboard, wait...")
 	var dashboardTabs []*v1alpha1.DashboardTab
 	for _, dashboard := range []string{"sig-release-master-blocking", "sig-release-master-informing"} {
 		dashSummaries, err := tg.FetchTabSummary(dashboard, v1alpha1.ERROR_STATUSES)
