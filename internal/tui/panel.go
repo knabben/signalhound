@@ -25,6 +25,32 @@ var (
 	position    = tview.NewTextView()
 )
 
+func formatTitle(txt string) string {
+	// var titleColor = "green"
+	// return fmt.Sprintf(" [%s:bg:b]%s[-:-:-] ", titleColor, txt)
+	return fmt.Sprintf(" [:bg:b]%s[-:-:-] ", txt)
+}
+
+func defaultBorderStyle() tcell.Style {
+	fg := tcell.ColorGreen
+	bg := tcell.ColorDefault
+	return tcell.StyleDefault.Foreground(fg).Background(bg)
+}
+
+func setPanelDefaultStyle(p *tview.Box) {
+	p.SetBorder(true)
+	p.SetBorderStyle(defaultBorderStyle())
+	p.SetTitleColor(tcell.ColorGreen)
+	p.SetBackgroundColor(tcell.ColorDefault)
+}
+
+func setPanelFocusStyle(p *tview.Box) {
+	p.SetBorderColor(tcell.ColorBlue)
+	p.SetTitleColor(tcell.ColorBlue)
+	p.SetBackgroundColor(tcell.ColorDarkBlue)
+	app.SetFocus(p)
+}
+
 // RenderVisual loads the entire grid and componnents in the app.
 // this is a blocking functions.
 func RenderVisual(tabs []*v1alpha1.DashboardTab, githubToken string) error {
@@ -32,18 +58,22 @@ func RenderVisual(tabs []*v1alpha1.DashboardTab, githubToken string) error {
 
 	// Render tab in the first row
 	tabsPanel := tview.NewList().ShowSecondaryText(false)
-	tabsPanel.SetBorder(true).SetTitle("Board#Tabs")
+	setPanelDefaultStyle(tabsPanel.Box)
+	tabsPanel.SetTitle(formatTitle("Board#Tabs"))
 
 	// Broken tests in the tab
 	brokenPanel.ShowSecondaryText(false).SetDoneFunc(func() { app.SetFocus(tabsPanel) })
-	brokenPanel.SetBorder(true).SetTitle("Tests")
+	setPanelDefaultStyle(brokenPanel.Box)
+	brokenPanel.SetTitle(formatTitle("Tests"))
 
 	// Slack Final issue rendering
-	slackPanel.SetBorder(true).SetTitle("Slack Message")
+	setPanelDefaultStyle(slackPanel.Box)
+	slackPanel.SetTitle(formatTitle("Slack Message"))
 	slackPanel.SetWrap(true).SetDisabled(true)
 
 	// GitHub panel rendering
-	githubPanel.SetBorder(true).SetTitle("Github Issue")
+	setPanelDefaultStyle(githubPanel.Box)
+	githubPanel.SetTitle(formatTitle("Github Issue"))
 	githubPanel.SetWrap(true)
 
 	// Final position bottom panel for information
@@ -75,8 +105,6 @@ func RenderVisual(tabs []*v1alpha1.DashboardTab, githubToken string) error {
 			brokenPanel.SetCurrentItem(0)
 			brokenPanel.SetChangedFunc(func(i int, testName string, t string, s rune) {
 				position.SetText(positionText)
-				slackPanel.SetBorderColor(tcell.ColorWhite)
-				githubPanel.SetBorderColor(tcell.ColorWhite)
 			})
 			// Broken panel rendering the function selection
 			brokenPanel.SetSelectedFunc(func(i int, testName string, t string, s rune) {
@@ -110,8 +138,14 @@ func updateSlackPanel(tab *v1alpha1.DashboardTab, currentTest *v1alpha1.TestResu
 				position.SetText(fmt.Sprintf("[red]error: %v", err.Error()))
 				return event
 			}
-			slackPanel.SetBorderColor(tcell.ColorBlue)
-			app.SetFocus(brokenPanel)
+			setPanelFocusStyle(slackPanel.Box)
+			go func() {
+				time.Sleep(1 * time.Second)
+				app.QueueUpdateDraw(func() {
+					app.SetFocus(brokenPanel)
+					setPanelDefaultStyle(slackPanel.Box)
+				})
+			}()
 		}
 		if event.Key() == tcell.KeyEscape || event.Key() == tcell.KeyUp {
 			slackPanel.SetText("", false)
@@ -164,8 +198,14 @@ func updateGitHubPanel(tab *v1alpha1.DashboardTab, currentTest *v1alpha1.TestRes
 				position.SetText(fmt.Sprintf("[red]error: %v", err.Error()))
 				return event
 			}
-			githubPanel.SetBorderColor(tcell.ColorBlue)
-			app.SetFocus(brokenPanel)
+			setPanelFocusStyle(githubPanel.Box)
+			go func() {
+				time.Sleep(1 * time.Second)
+				app.QueueUpdateDraw(func() {
+					app.SetFocus(brokenPanel)
+					setPanelDefaultStyle(githubPanel.Box)
+				})
+			}()
 		}
 		if event.Key() == tcell.KeyCtrlB {
 			gh := github.NewGithub(context.Background(), token)
@@ -174,8 +214,14 @@ func updateGitHubPanel(tab *v1alpha1.DashboardTab, currentTest *v1alpha1.TestRes
 				return event
 			}
 			position.SetText("[blue]Created [yellow]DRAFT ISSUE [blue] on GitHub Project!")
-			githubPanel.SetBorderColor(tcell.ColorBlue)
-			app.SetFocus(brokenPanel)
+			setPanelFocusStyle(githubPanel.Box)
+			go func() {
+				time.Sleep(1 * time.Second)
+				app.QueueUpdateDraw(func() {
+					app.SetFocus(brokenPanel)
+					setPanelDefaultStyle(githubPanel.Box)
+				})
+			}()
 		}
 		if event.Key() == tcell.KeyEscape {
 			slackPanel.SetText("", false)
@@ -199,7 +245,28 @@ func timeClean(ts int64) string {
 
 // CopyToClipboard pipes the panel content to clip.exe WSL.
 func CopyToClipboard(text string) error {
-	args := "echo '" + text + "' | clip.exe"
-	cmd := exec.Command("bash", "-c", args)
+	var cmd *exec.Cmd
+
+	// Detect the operating system and use appropriate clipboard command
+	switch {
+	case exec.Command("which", "clip.exe").Run() == nil:
+		// Windows (WSL)
+		cmd = exec.Command("bash", "-c", "echo '"+text+"' | clip.exe")
+	case exec.Command("which", "pbcopy").Run() == nil:
+		// macOS
+		cmd = exec.Command("pbcopy")
+		cmd.Stdin = strings.NewReader(text)
+	case exec.Command("which", "xclip").Run() == nil:
+		// Linux with xclip
+		cmd = exec.Command("xclip", "-selection", "clipboard")
+		cmd.Stdin = strings.NewReader(text)
+	case exec.Command("which", "wl-copy").Run() == nil:
+		// Linux with wl-clipboard (Wayland)
+		cmd = exec.Command("wl-copy")
+		cmd.Stdin = strings.NewReader(text)
+	default:
+		return fmt.Errorf("no clipboard utility found (tried: clip.exe, pbcopy, xclip, wl-copy)")
+	}
+
 	return cmd.Run()
 }
