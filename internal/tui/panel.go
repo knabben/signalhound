@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -248,25 +249,40 @@ func CopyToClipboard(text string) error {
 	var cmd *exec.Cmd
 
 	// Detect the operating system and use appropriate clipboard command
-	switch {
-	case exec.Command("which", "clip.exe").Run() == nil:
-		// Windows (WSL)
-		cmd = exec.Command("bash", "-c", "echo '"+text+"' | clip.exe")
-	case exec.Command("which", "pbcopy").Run() == nil:
+	switch runtime.GOOS {
+	case "windows":
+		// Native Windows
+		cmd = exec.Command("cmd", "/c", "echo "+text+" | clip")
+		// Alternative: cmd = exec.Command("powershell", "-command", "Set-Clipboard", "-Value", text)
+
+	case "darwin":
 		// macOS
 		cmd = exec.Command("pbcopy")
 		cmd.Stdin = strings.NewReader(text)
-	case exec.Command("which", "xclip").Run() == nil:
-		// Linux with xclip
-		cmd = exec.Command("xclip", "-selection", "clipboard")
-		cmd.Stdin = strings.NewReader(text)
-	case exec.Command("which", "wl-copy").Run() == nil:
-		// Linux with wl-clipboard (Wayland)
-		cmd = exec.Command("wl-copy")
-		cmd.Stdin = strings.NewReader(text)
+
+	case "linux":
+		// Linux - need to check for available clipboard manager
+		// Try different clipboard managers in order of preference
+
+		// Check if running under WSL
+		if isWSL() {
+			// WSL environment - use clip.exe
+			cmd = exec.Command("clip.exe")
+			cmd.Stdin = strings.NewReader(text)
+		} else if isWayland() {
+			// Wayland
+			cmd = exec.Command("wl-copy")
+			cmd.Stdin = strings.NewReader(text)
+		} else {
+			// X11
+			cmd = exec.Command("xclip", "-selection", "clipboard")
+			cmd.Stdin = strings.NewReader(text)
+		}
+
 	default:
-		return fmt.Errorf("no clipboard utility found (tried: clip.exe, pbcopy, xclip, wl-copy)")
+		return fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
 	}
 
 	return cmd.Run()
+
 }
