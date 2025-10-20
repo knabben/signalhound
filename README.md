@@ -46,6 +46,8 @@ you create a PAT you will store it in the local `SIGNALHOUND_GITHUB_TOKEN` or `G
 so that signalhound can access it.  For instructions to create a GitHub PAT,
 [visit the docs](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token).
 
+Currently a `classic` PAT with `project` and `repo` scopes is required.
+
 ```bash
 # Best practice is to use a fine-grained personal access token
 # specifically created for signalhound.

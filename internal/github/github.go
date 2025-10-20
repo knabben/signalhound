@@ -101,8 +101,9 @@ func (r *Repository) getWorkflow() (*g3.Workflow, error) {
 	return workflow, err
 }
 
-// CreateDraftIssue creates a new issue draft issue in the board with a
-// specific test issue template.
+// CreateDraftIssue creates a new draft issue in the GitHub project board with
+// specific field values set automatically. Requires a Classic PAT with 'repo'
+// and 'project' scopes.
 func (g *GitHub) CreateDraftIssue(title, body string) error {
 	var mutationDraft struct {
 		AddProjectV2DraftIssue struct {
