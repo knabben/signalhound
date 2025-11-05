@@ -15,6 +15,7 @@ import (
 var (
 	URL            = "https://testgrid.k8s.io"
 	e2eSuitePrefix = `Kubernetes e2e suite.`
+	kubetestPrefix = `kubetest`
 	testRegex      = e2eSuitePrefix + `\[It\] \[(\w.*)\] (?<TEST>\w.*)`
 )
 
@@ -163,6 +164,7 @@ func (t *TestGrid) FetchTabTests(summary *v1alpha1.DashboardSummary, minFailure,
 }
 
 func filterTabTests(testGroup *TestGroup, state string, minFailure, minFlake int) (tests []v1alpha1.TestResult) {
+	jobName := strings.Split(testGroup.Query, "/")
 	for _, test := range testGroup.Tests {
 		errMessage, failures, firstFailure := test.RenderStatuses(testGroup.Timestamps)
 		if (failures >= minFailure && state == v1alpha1.FAILING_STATUS) ||
@@ -171,12 +173,15 @@ func filterTabTests(testGroup *TestGroup, state string, minFailure, minFlake int
 			if strings.Contains(testName, e2eSuitePrefix) {
 				testName = prow.GetRegexParameter(testRegex, testName)["TEST"]
 			}
+			if strings.Contains(testName, kubetestPrefix) {
+				testName = strings.TrimPrefix(strings.TrimPrefix(testName, "kubetest2."), "kubetest.")
+			}
 			tests = append(tests, v1alpha1.TestResult{
 				TestName:        test.Name,
 				LatestTimestamp: testGroup.Timestamps[0],
 				FirstTimestamp:  testGroup.Timestamps[len(testGroup.Timestamps)-1],
 				ProwJobURL:      cleanHTMLCharacters(fmt.Sprintf("https://prow.k8s.io/view/gs/%s/%s", testGroup.Query, testGroup.Changelists[firstFailure])),
-				TriageURL:       cleanHTMLCharacters(fmt.Sprintf("https://storage.googleapis.com/k8s-triage/index.html?test=%s", cleanHTMLCharacters(testName))),
+				TriageURL:       cleanHTMLCharacters(fmt.Sprintf("https://storage.googleapis.com/k8s-triage/index.html?job=%s$&test=%s", cleanHTMLCharacters(jobName[len(jobName)-1]), cleanHTMLCharacters(testName))),
 				ErrorMessage:    errMessage,
 			})
 		}
